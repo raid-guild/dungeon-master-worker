@@ -2,9 +2,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const DISCORD_DM_TOKEN = process.env.DISCORD_TOKEN ?? '';
+export const DISCORD_DM_TOKEN = process.env.DISCORD_DM_TOKEN ?? '';
 export const DISCORD_GUARD_TOKEN = process.env.DISCORD_GUARD_TOKEN ?? '';
-export const DISCORD_DM_CLIENT_ID = process.env.DISCORD_CLIENT_ID ?? '';
+export const DISCORD_DM_CLIENT_ID = process.env.DISCORD_DM_CLIENT_ID ?? '';
 export const DISCORD_GUARD_CLIENT_ID =
   process.env.DISCORD_GUARD_CLIENT_ID ?? '';
 export const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID ?? '';
