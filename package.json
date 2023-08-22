@@ -14,11 +14,7 @@
     "openai": "^3.2.1",
     "ts-node": "^10.9.1"
   },
-  "_moduleAliases": {
-    "@": "dist"
-  },
   "scripts": {
-    "postinstall": "npx tsc",
     "deploy-commands": "ts-node -T src/deployCommands.ts",
     "dev": "nodemon src/index.ts",
     "start": "ts-node -T src/index.ts",
@@ -48,7 +44,6 @@
     "eslint-plugin-simple-import-sort": "^7.0.0",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
-    "module-alias": "^2.2.3",
     "nodemon": "^2.0.22",
     "prettier": "^2.6.1",
     "tsconfig-paths": "^4.2.0",

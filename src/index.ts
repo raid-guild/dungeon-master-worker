@@ -1,5 +1,3 @@
-import 'module-alias/register';
-
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
 import { executeInteraction, queryCommand } from '@/commands';
