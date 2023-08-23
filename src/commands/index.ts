@@ -8,5 +8,6 @@ export {
   editCampChannelCommand,
   editRaidChannelCommand,
   executeInteraction,
+  roleStatsCommand,
   toValhallaCommand
 } from '@/commands/guard';

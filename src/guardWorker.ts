@@ -13,6 +13,7 @@ import {
   editCampChannelCommand,
   editRaidChannelCommand,
   executeInteraction,
+  roleStatsCommand,
   toValhallaCommand
 } from '@/commands';
 import { lurkerGuard } from '@/features/lurkerGuard';
@@ -46,6 +47,7 @@ export const setupGuardWorker = () => {
   client.commands.set(createCampChannelCommand.name, createCampChannelCommand);
   client.commands.set(editRaidChannelCommand.name, editRaidChannelCommand);
   client.commands.set(editCampChannelCommand.name, editCampChannelCommand);
+  client.commands.set(roleStatsCommand.name, roleStatsCommand);
 
   client.on(Events.ClientReady, () => {
     if (!client.user) return;

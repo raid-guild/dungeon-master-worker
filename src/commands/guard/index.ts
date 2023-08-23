@@ -17,6 +17,10 @@ import {
   editRaidChannelExecute
 } from '@/commands/guard/edit-raid-channel';
 import {
+  roleStatsCommand,
+  roleStatsExecute
+} from '@/commands/guard/role-stats';
+import {
   toValhallaCommand,
   toValhallaExecute
 } from '@/commands/guard/valhalla';
@@ -26,6 +30,7 @@ export {
   createRaidChannelCommand,
   editCampChannelCommand,
   editRaidChannelCommand,
+  roleStatsCommand,
   toValhallaCommand
 };
 
@@ -49,6 +54,9 @@ export const executeInteraction = async (
       break;
     case editCampChannelCommand.name:
       await editCampChannelExecute(interaction);
+      break;
+    case roleStatsCommand.name:
+      await roleStatsExecute(interaction);
       break;
     default:
       console.error(`Command ${commandName} not found`);
