@@ -3,6 +3,7 @@ export {
   queryCommand
 } from '@/commands/dungeonMaster';
 export {
+  createCampChannelCommand,
   createRaidChannelCommand,
   executeInteraction,
   toValhallaCommand

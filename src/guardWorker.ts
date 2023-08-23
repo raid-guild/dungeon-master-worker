@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 
 import {
+  createCampChannelCommand,
   createRaidChannelCommand,
   executeInteraction,
   toValhallaCommand
@@ -40,6 +41,7 @@ export const setupGuardWorker = () => {
   client.commands = new Collection();
   client.commands.set(toValhallaCommand.name, toValhallaCommand);
   client.commands.set(createRaidChannelCommand.name, createRaidChannelCommand);
+  client.commands.set(createCampChannelCommand.name, createCampChannelCommand);
 
   client.on(Events.ClientReady, () => {
     if (!client.user) return;
