@@ -1,7 +1,7 @@
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
 import { executeInteraction, queryCommand } from '@/commands';
-// import { createComradeSentryServer } from "@/comradeSentry";
+import { setupGuardWorker } from '@/guardWorker';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
@@ -9,7 +9,7 @@ import {
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const createServer = () => {
+export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
     intents: [GatewayIntentBits.Guilds]
   });
@@ -82,5 +82,5 @@ export const createServer = () => {
   client.login(DISCORD_DM_TOKEN);
 };
 
-createServer();
-// createComradeSentryServer();
+setupDungeonMasterWorker();
+setupGuardWorker();

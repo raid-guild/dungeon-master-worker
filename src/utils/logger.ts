@@ -1,4 +1,4 @@
-import { TextChannel } from 'discord.js';
+import { EmbedBuilder, TextChannel } from 'discord.js';
 
 import { ClientWithCommands } from '@/types';
 import { DISCORD_COMMAND_CENTER_ID, DISCORD_GUILD_ID } from '@/utils/constants';
@@ -23,9 +23,12 @@ export const discordLogger = (
       console.error('Error logging: command center channel not found');
       return;
     }
-    (commandCenterChannel as unknown as TextChannel).send({
-      content: String(errorMessage)
-    });
+
+    const embed = new EmbedBuilder()
+      .setDescription(String(errorMessage))
+      .setColor('#ff3864');
+
+    (commandCenterChannel as unknown as TextChannel).send({ embeds: [embed] });
   } catch (err) {
     console.log(err);
   }
