@@ -1,13 +1,20 @@
 import {
   Client,
+  Collection,
   Events,
   GatewayIntentBits,
   Partials,
   TextChannel
 } from 'discord.js';
 
+import {
+  createRaidChannelCommand,
+  executeInteraction,
+  toValhallaCommand
+} from '@/commands';
 import { lurkerGuard } from '@/features/lurkerGuard';
 import { roleClaim } from '@/features/roleClaim';
+import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOW_BOTS,
   DISCORD_GUARD_TOKEN,
@@ -18,7 +25,7 @@ import {
 import { discordLogger } from '@/utils/logger';
 
 export const setupGuardWorker = () => {
-  const client = new Client({
+  const client: ClientWithCommands = new Client({
     partials: [Partials.Message, Partials.Reaction, Partials.Channel],
     intents: [
       GatewayIntentBits.Guilds,
@@ -29,6 +36,10 @@ export const setupGuardWorker = () => {
       GatewayIntentBits.GuildInvites
     ]
   });
+
+  client.commands = new Collection();
+  client.commands.set(toValhallaCommand.name, toValhallaCommand);
+  client.commands.set(createRaidChannelCommand.name, createRaidChannelCommand);
 
   client.on(Events.ClientReady, () => {
     if (!client.user) return;
@@ -67,6 +78,22 @@ export const setupGuardWorker = () => {
       console.log(err);
       discordLogger('Error caught in entry check.', client);
     }
+  });
+
+  client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isCommand()) return;
+
+    const command = (interaction.client as ClientWithCommands).commands?.get(
+      interaction.commandName
+    );
+
+    if (!command) {
+      console.log(`Command ${interaction.commandName} not found`);
+      return;
+    }
+
+    await interaction.deferReply();
+    await executeInteraction(interaction);
   });
 
   client.login(DISCORD_GUARD_TOKEN);

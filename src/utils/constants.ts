@@ -12,6 +12,10 @@ export const DISCORD_COMMAND_CENTER_ID =
   process.env.DISCORD_COMMAND_CENTER_ID ?? '';
 export const DISCORD_START_HERE_CHANNEL_ID =
   process.env.DISCORD_START_HERE_CHANNEL_ID ?? '';
+export const DISCORD_VALHALLA_CATEGORY_ID =
+  process.env.DISCORD_VALHALLA_CATEGORY_ID ?? '';
+export const DISCORD_RAIDS_CATEGORY_ID =
+  process.env.DISCORD_RAIDS_CATEGORY_ID ?? '';
 export const DISCORD_ALLOWED_TIME_WITHOUT_ANY_ROLES =
   process.env.DISCORD_ALLOWED_TIME_WITHOUT_ANY_ROLES ?? 900000;
 export const DISCORD_ALLOW_BOTS = process.env.DISCORD_ALLOW_BOTS ?? false;
@@ -21,6 +25,7 @@ export const DISCORD_NEWCOMERS_CHANNEL_ID =
   process.env.DISCORD_NEWCOMERS_CHANNEL_ID ?? '';
 export const DISCORD_ALLOWED_PARENT_CHANNEL_IDS =
   process.env.DISCORD_ALLOWED_PARENT_CHANNEL_IDS?.split(',') ?? [];
+export const DISCORD_MEMBER_ROLE_ID = process.env.DISCORD_MEMBER_ROLE_ID ?? '';
 
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 

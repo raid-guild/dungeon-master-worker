@@ -1,6 +1,6 @@
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
-import { executeInteraction, queryCommand } from '@/commands';
+import { executeQueryInteraction, queryCommand } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import { ClientWithCommands } from '@/types';
 import {
@@ -58,7 +58,7 @@ export const setupDungeonMasterWorker = () => {
     }
 
     try {
-      await executeInteraction(interaction, prompt);
+      await executeQueryInteraction(interaction, prompt);
     } catch (error) {
       console.error(error);
       discordLogger(error, client);
