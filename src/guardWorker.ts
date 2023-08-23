@@ -10,6 +10,7 @@ import {
 import {
   createCampChannelCommand,
   createRaidChannelCommand,
+  editCampChannelCommand,
   editRaidChannelCommand,
   executeInteraction,
   toValhallaCommand
@@ -44,6 +45,7 @@ export const setupGuardWorker = () => {
   client.commands.set(createRaidChannelCommand.name, createRaidChannelCommand);
   client.commands.set(createCampChannelCommand.name, createCampChannelCommand);
   client.commands.set(editRaidChannelCommand.name, editRaidChannelCommand);
+  client.commands.set(editCampChannelCommand.name, editCampChannelCommand);
 
   client.on(Events.ClientReady, () => {
     if (!client.user) return;

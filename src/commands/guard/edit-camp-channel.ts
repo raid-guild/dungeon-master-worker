@@ -6,16 +6,16 @@ import {
   TextChannel
 } from 'discord.js';
 
-import { DISCORD_RAIDS_CATEGORY_ID } from '@/utils/constants';
+import { DISCORD_CAMPS_CATEGORY_ID } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const editRaidChannelCommand = new SlashCommandBuilder()
-  .setName('edit-raid-channel')
-  .setDescription('Adds new member to a raid channel')
+export const editCampChannelCommand = new SlashCommandBuilder()
+  .setName('edit-camp-channel')
+  .setDescription('Adds new member to a camp channel')
   .addChannelOption(option =>
     option
-      .setName('raid-channel')
-      .setDescription('The name of the raid channel to update')
+      .setName('camp-channel')
+      .setDescription('The name of the camp channel to update')
       .setRequired(true)
   )
   .addUserOption(option =>
@@ -27,11 +27,11 @@ export const editRaidChannelCommand = new SlashCommandBuilder()
       .setRequired(true)
   );
 
-export const editRaidChannelExecute = async (
+export const editCampChannelExecute = async (
   interaction: CommandInteraction<CacheType>
 ) => {
   try {
-    const channelId = interaction.options.get('raid-channel')?.value as string;
+    const channelId = interaction.options.get('camp-channel')?.value as string;
     const nonMember = interaction.options.getUser('non-member');
 
     const channel = interaction.guild?.channels.cache.get(
@@ -54,10 +54,10 @@ export const editRaidChannelExecute = async (
       return;
     }
 
-    if (channel.parentId !== DISCORD_RAIDS_CATEGORY_ID) {
+    if (channel.parentId !== DISCORD_CAMPS_CATEGORY_ID) {
       const embed = new EmbedBuilder()
         .setColor('#ff3864')
-        .setDescription(`Mentioned channel, ${channel} is not a raid channel.`);
+        .setDescription(`Mentioned channel, ${channel} is not a camp channel.`);
       await interaction.followUp({ embeds: [embed], ephemeral: true });
       return;
     }
@@ -76,6 +76,6 @@ export const editRaidChannelExecute = async (
     );
   } catch (err) {
     console.error(err);
-    discordLogger('Error caught in edit raid channel.', interaction.client);
+    discordLogger('Error caught in edit camp channel.', interaction.client);
   }
 };

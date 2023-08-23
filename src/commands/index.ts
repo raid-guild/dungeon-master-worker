@@ -5,6 +5,7 @@ export {
 export {
   createCampChannelCommand,
   createRaidChannelCommand,
+  editCampChannelCommand,
   editRaidChannelCommand,
   executeInteraction,
   toValhallaCommand
