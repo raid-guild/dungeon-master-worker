@@ -15,7 +15,7 @@
     "ts-node": "^10.9.1"
   },
   "scripts": {
-    "deploy-commands": "ts-node -T src/deployCommands.ts",
+    "deploy-commands": "ts-node -T src/deploy-commands.ts",
     "dev": "nodemon src/index.ts",
     "start": "ts-node -T src/index.ts",
     "lint": "eslint --ignore-path .gitignore \"*/**/*.{js,jsx,ts,tsx}\" --fix",

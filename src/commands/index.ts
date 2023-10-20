@@ -1,4 +1,8 @@
 export {
+  executeTipXpInteraction,
+  tipXpCommand
+} from '@/commands/characterSheets';
+export {
   executeQueryInteraction,
   queryCommand
 } from '@/commands/dungeonMaster';
