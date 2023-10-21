@@ -5,30 +5,9 @@ import {
 } from 'discord.js';
 
 import { executeQueryInteraction, executeTipXpInteraction } from '@/commands';
+import { getPlayerAddressByDiscordHandle } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { discordLogger } from '@/utils/logger';
-
-export const handleError = async (
-  client: ClientWithCommands,
-  interaction:
-    | ChatInputCommandInteraction
-    | MessageContextMenuCommandInteraction
-    | UserContextMenuCommandInteraction,
-  error: unknown,
-  content: string
-) => {
-  console.error(error);
-  discordLogger(error, client);
-  if (interaction.replied || interaction.deferred) {
-    await interaction.followUp({
-      content
-    });
-  } else {
-    await interaction.reply({
-      content
-    });
-  }
-};
+import { logError } from '@/utils/logger';
 
 export const queryInteraction = async (
   client: ClientWithCommands,
@@ -49,7 +28,7 @@ export const queryInteraction = async (
   try {
     await executeQueryInteraction(interaction, prompt);
   } catch (error) {
-    handleError(
+    logError(
       client,
       interaction,
       error,
@@ -65,10 +44,29 @@ export const tipXpInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
+  const memberId = (interaction.options.get('member')?.value ?? '') as string;
+  const discordMember = interaction.guild?.members.cache.get(memberId);
+  const discordUsername = discordMember?.user.tag;
+
+  if (!discordUsername) {
+    await interaction.followUp({
+      content: 'Could not find Discord user!'
+    });
+    return;
+  }
+
+  const ethAddress = await getPlayerAddressByDiscordHandle(
+    client,
+    interaction,
+    discordUsername
+  );
+
+  console.log(`ethAddress: ${ethAddress}`);
+
   try {
     await executeTipXpInteraction(interaction);
   } catch (error) {
-    handleError(
+    logError(
       client,
       interaction,
       error,

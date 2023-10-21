@@ -1,4 +1,10 @@
-import { EmbedBuilder, TextChannel } from 'discord.js';
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  MessageContextMenuCommandInteraction,
+  TextChannel,
+  UserContextMenuCommandInteraction
+} from 'discord.js';
 
 import { ClientWithCommands } from '@/types';
 import { DISCORD_COMMAND_CENTER_ID, DISCORD_GUILD_ID } from '@/utils/constants';
@@ -31,5 +37,27 @@ export const discordLogger = (
     (commandCenterChannel as unknown as TextChannel).send({ embeds: [embed] });
   } catch (err) {
     console.log(err);
+  }
+};
+
+export const logError = async (
+  client: ClientWithCommands,
+  interaction:
+    | ChatInputCommandInteraction
+    | MessageContextMenuCommandInteraction
+    | UserContextMenuCommandInteraction,
+  error: unknown,
+  content: string
+) => {
+  console.error(error);
+  discordLogger(error, client);
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp({
+      content
+    });
+  } else {
+    await interaction.reply({
+      content
+    });
   }
 };
