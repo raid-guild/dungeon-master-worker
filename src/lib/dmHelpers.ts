@@ -1,6 +1,7 @@
 import axios from 'axios';
 import {
   ChatInputCommandInteraction,
+  GuildMember,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
@@ -24,12 +25,12 @@ export const getPlayerAddressByDiscordHandle = async (
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
-  handle: string
+  discordMember: GuildMember
 ): Promise<string | null> => {
   try {
     const query = `
       query MemberQuery {
-        members(where: { contact_info: { discord: { _eq: ${handle}}}}) {
+        members(where: { contact_info: { discord: { _eq: ${discordMember.user.tag}}}}) {
           eth_address
         }
       }
@@ -57,7 +58,7 @@ export const getPlayerAddressByDiscordHandle = async (
       | undefined;
 
     if (!ethAddress) {
-      throw new Error(`ERROR: no eth address found for ${handle}`);
+      throw new Error(`No eth address found for <@${discordMember.id}>`);
     }
     return ethAddress;
   } catch (err) {
@@ -65,7 +66,7 @@ export const getPlayerAddressByDiscordHandle = async (
       client,
       interaction,
       err,
-      `There was an error finding an ETH address associated with ${handle} in DungeonMaster!`
+      `There was an error finding an ETH address associated with <@${discordMember.id}> in DungeonMaster!`
     );
     return null;
   }

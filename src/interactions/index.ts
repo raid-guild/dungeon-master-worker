@@ -4,11 +4,12 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
-import { executeQueryInteraction, executeTipXpInteraction } from '@/commands';
+import { executeQueryInteraction } from '@/commands';
 import { getPlayerAddressByDiscordHandle } from '@/lib';
-import { getCharacterAccountByPlayerAddress } from '@/lib/csHelpers';
+import { dropExp, getCharacterAccountByPlayerAddress } from '@/lib/csHelpers';
 import { ClientWithCommands } from '@/types';
-import { logError } from '@/utils/logger';
+import { EXPLORER_URL } from '@/utils/constants';
+import { discordLogger, logError } from '@/utils/logger';
 
 export const queryInteraction = async (
   client: ClientWithCommands,
@@ -59,9 +60,8 @@ export const tipXpInteraction = async (
   const playerAddress = await getPlayerAddressByDiscordHandle(
     client,
     interaction,
-    discordUsername
+    discordMember
   );
-
   if (!playerAddress) return;
 
   const accountAddress = await getCharacterAccountByPlayerAddress(
@@ -69,24 +69,31 @@ export const tipXpInteraction = async (
     interaction,
     playerAddress
   );
-
   if (!accountAddress) return;
 
-  console.log(`accountAddress: ${accountAddress}`);
+  const tx = await dropExp(client, interaction, accountAddress);
+  if (!tx) return;
 
-  // 3. Prepare the NPC Gnosis Safe
-  // 4. Call dropExp with the NPC Gnosis Safe
-  // 5. Return the transaction hash
-  // 6. Return success or failure message
+  const txHash = tx.hash;
 
-  try {
-    await executeTipXpInteraction(interaction);
-  } catch (error) {
-    logError(
-      client,
-      interaction,
-      error,
-      'There was an error while giving an XP tip!'
-    );
+  if (EXPLORER_URL) {
+    await interaction.followUp({
+      content: `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+    });
+  } else {
+    discordLogger('Missing EXPLORER_URL env', client);
   }
+
+  const txReceipt = await tx.wait();
+
+  if (!txReceipt.status) {
+    await interaction.followUp({
+      content: `Transaction failed!`
+    });
+    return;
+  }
+
+  await interaction.followUp({
+    content: `Transaction succeeded! <@${discordMember.id}> has been tipped 5 XP!`
+  });
 };

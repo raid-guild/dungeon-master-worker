@@ -39,3 +39,9 @@ export const HASURA_GRAPHQL_ADMIN_SECRET =
 export const RAIDGUILD_GAME_ADDRESS = process.env.RAIDGUILD_GAME_ADDRESS ?? '';
 export const CHARACTER_SHEETS_SUBGRAPH_URL =
   process.env.CHARACTER_SHEETS_SUBGRAPH_URL ?? '';
+
+export const NPC_SAFE_ADDRESS = process.env.NPC_SAFE_ADDRESS ?? '';
+export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
+export const RPC_URL = process.env.RPC_URL ?? '';
+export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
+export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';

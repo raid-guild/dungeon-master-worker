@@ -24,6 +24,7 @@
     "import/extensions": "off",
     "import/no-unresolved": "error",
     "import/no-default-export": "error",
+    "import/no-extraneous-dependencies": "off",
     "import/no-relative-packages": "error",
     "import/prefer-default-export": "off",
     "no-restricted-imports": [
