@@ -7,42 +7,37 @@ import {
 
 import { ClientWithCommands } from '@/types';
 import {
-  HASURA_GRAPHQL_ADMIN_SECRET,
-  HASURA_GRAPHQL_ENDPOINT
+  CHARACTER_SHEETS_SUBGRAPH_URL,
+  RAIDGUILD_GAME_ADDRESS
 } from '@/utils/constants';
 import { logError } from '@/utils/logger';
 
-if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
+if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
   throw new Error(
-    'Missing envs HASURA_GRAPHQL_ENDPOINT or HASURA_GRAPHQL_ADMIN_SECRET'
+    'Missing envs RAIDGUILD_GAME_ADDRESS or CHARACTER_SHEETS_SUBGRAPH_URL'
   );
 }
 
-export const getPlayerAddressByDiscordHandle = async (
+export const getCharacterAccountByPlayerAddress = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
-  handle: string
+  playerAddress: string
 ): Promise<string | null> => {
   try {
     const query = `
-      query MemberQuery {
-        members(where: { contact_info: { discord: { _eq: ${handle}}}}) {
-          eth_address
+      query CharacterAccountQuery {
+        characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player: "${playerAddress}"}) {
+          account
         }
       }
     `;
 
-    const headers = {
-      'x-hasura-admin-secret': HASURA_GRAPHQL_ADMIN_SECRET
-    };
-
     const response = await axios({
-      url: HASURA_GRAPHQL_ENDPOINT,
+      url: CHARACTER_SHEETS_SUBGRAPH_URL,
       method: 'post',
-      headers,
       data: {
         query
       }
@@ -52,20 +47,22 @@ export const getPlayerAddressByDiscordHandle = async (
       throw new Error(JSON.stringify(response.data.errors));
     }
 
-    const ethAddress = response.data.data.members[0]?.eth_address as
+    const accountAddress = response.data.data.characters[0].account as
       | string
       | undefined;
 
-    if (!ethAddress) {
-      throw new Error(`ERROR: no eth address found for ${handle}`);
+    if (!accountAddress) {
+      throw new Error(
+        `ERROR: there is no character account address associated with that Discord handle`
+      );
     }
-    return ethAddress;
+    return accountAddress;
   } catch (err) {
     logError(
       client,
       interaction,
       err,
-      `There was an error finding an ETH address associated with ${handle} in DungeonMaster!`
+      'There was an error finding a character account address associated with that Discord handle in CharacterSheets!'
     );
     return null;
   }

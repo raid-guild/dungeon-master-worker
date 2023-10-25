@@ -6,6 +6,7 @@ import {
 
 import { executeQueryInteraction, executeTipXpInteraction } from '@/commands';
 import { getPlayerAddressByDiscordHandle } from '@/lib';
+import { getCharacterAccountByPlayerAddress } from '@/lib/csHelpers';
 import { ClientWithCommands } from '@/types';
 import { logError } from '@/utils/logger';
 
@@ -55,13 +56,28 @@ export const tipXpInteraction = async (
     return;
   }
 
-  const ethAddress = await getPlayerAddressByDiscordHandle(
+  const playerAddress = await getPlayerAddressByDiscordHandle(
     client,
     interaction,
     discordUsername
   );
 
-  console.log(`ethAddress: ${ethAddress}`);
+  if (!playerAddress) return;
+
+  const accountAddress = await getCharacterAccountByPlayerAddress(
+    client,
+    interaction,
+    playerAddress
+  );
+
+  if (!accountAddress) return;
+
+  console.log(`accountAddress: ${accountAddress}`);
+
+  // 3. Prepare the NPC Gnosis Safe
+  // 4. Call dropExp with the NPC Gnosis Safe
+  // 5. Return the transaction hash
+  // 6. Return success or failure message
 
   try {
     await executeTipXpInteraction(interaction);
