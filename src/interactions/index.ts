@@ -74,6 +74,30 @@ export const tipXpInteraction = async (
     return;
   }
 
+  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordHandles(
+    client,
+    interaction,
+    [interaction.member as GuildMember]
+  );
+
+  if (
+    !senderTagToEthAddressMap ||
+    !senderTagToEthAddressMap[interaction.user.tag]
+  ) {
+    const embed = new EmbedBuilder()
+      .setTitle('Not a Member')
+      .setDescription(
+        `You are not a member of RaidGuild! If you think this is an error, ensure that your Discord handle is registered correctly in DungeonMaster.`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.followUp({
+      embeds: [embed]
+    });
+    return;
+  }
+
   const [discordTagToEthAddressMap, discordTagsWithoutEthAddress] =
     await getPlayerAddressesByDiscordHandles(
       client,
@@ -101,7 +125,7 @@ export const tipXpInteraction = async (
   const txHash = tx.hash;
 
   let embed = new EmbedBuilder()
-    .setTitle('XP tipping transaction pending...')
+    .setTitle('XP Tipping Transaction Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -117,7 +141,7 @@ export const tipXpInteraction = async (
 
   if (!txReceipt.status) {
     embed = new EmbedBuilder()
-      .setTitle('XP tipping transaction failed!')
+      .setTitle('XP Tipping Transaction Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
       .setDescription(
         `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -126,7 +150,6 @@ export const tipXpInteraction = async (
       .setTimestamp();
 
     await interaction.editReply({
-      content: '',
       embeds: [embed]
     });
     return;
@@ -166,7 +189,7 @@ export const tipXpInteraction = async (
       : '';
 
   embed = new EmbedBuilder()
-    .setTitle('XP tipping succeeded!')
+    .setTitle('XP Tipping Succeeded!')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `**<@${senderId}>** tipped 5 XP to the characters of ${discordIdsSuccessfullyTipped.map(
@@ -177,7 +200,6 @@ export const tipXpInteraction = async (
     .setTimestamp();
 
   await interaction.editReply({
-    content: '',
     embeds: [embed]
   });
 };
