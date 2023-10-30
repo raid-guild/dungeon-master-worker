@@ -26,19 +26,23 @@ if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
   );
 }
 
-export const getCharacterAccountByPlayerAddress = async (
+export const getCharacterAccountsByPlayerAddresses = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
-  playerAddress: string
-): Promise<string | null> => {
+  discordTagToEthAddressMap: Record<string, string>
+): Promise<[Record<string, string> | null, string[] | null]> => {
   try {
+    const playerAddress = Object.values(discordTagToEthAddressMap);
     const query = `
       query CharacterAccountQuery {
-        characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player: "${playerAddress}"}) {
+        characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player_in: ${JSON.stringify(
+      playerAddress
+    )}}) {
           account
+          player
         }
       }
     `;
@@ -55,16 +59,32 @@ export const getCharacterAccountByPlayerAddress = async (
       throw new Error(JSON.stringify(response.data.errors));
     }
 
-    const accountAddress = response.data.data.characters[0].account as
-      | string
-      | undefined;
-
-    if (!accountAddress) {
-      throw new Error(
-        `ERROR: there is no character account address associated with that Discord handle`
+    const discordTagToCharacterAccountMap =
+      response.data.data.characters.reduce(
+        (
+          acc: Record<string, string>,
+          character: { account: string; player: string }
+        ) => {
+          const discordTag = Object.keys(discordTagToEthAddressMap).find(
+            tag => discordTagToEthAddressMap[tag] === character.player
+          );
+          if (discordTag) {
+            acc[discordTag] = character.account;
+          }
+          return acc;
+        },
+        {}
       );
-    }
-    return accountAddress;
+
+    const discordTagsWithoutCharacterAccounts = Object.keys(
+      discordTagToEthAddressMap
+    ).filter(
+      tag => !Object.keys(discordTagToCharacterAccountMap).includes(tag)
+    );
+    return [
+      discordTagToCharacterAccountMap,
+      discordTagsWithoutCharacterAccounts
+    ];
   } catch (err) {
     logError(
       client,
@@ -72,7 +92,7 @@ export const getCharacterAccountByPlayerAddress = async (
       err,
       'There was an error finding a character account address associated with that Discord handle in CharacterSheets!'
     );
-    return null;
+    return [null, null];
   }
 };
 
@@ -99,16 +119,7 @@ export const getNpcGnosisSafe = async () => {
   return safe;
 };
 
-export const dropExp = async (
-  client: ClientWithCommands,
-  interaction:
-    | ChatInputCommandInteraction
-    | MessageContextMenuCommandInteraction
-    | UserContextMenuCommandInteraction,
-  accountAddress: string
-) => {
-  const safe = await getNpcGnosisSafe();
-
+const buildDropExpTransactionData = (accountAddress: string) => {
   const abi = parseAbi([
     'function dropExp(address character, uint256 amount) public'
   ]);
@@ -125,9 +136,26 @@ export const dropExp = async (
     value: '0'
   };
 
+  return dropExpTransactionData;
+};
+
+export const dropExp = async (
+  client: ClientWithCommands,
+  interaction:
+    | ChatInputCommandInteraction
+    | MessageContextMenuCommandInteraction
+    | UserContextMenuCommandInteraction,
+  accountAddresses: string[]
+) => {
+  const safe = await getNpcGnosisSafe();
+
+  const safeTransactionData = accountAddresses.map(accountAddress => {
+    return buildDropExpTransactionData(accountAddress);
+  });
+
   try {
     const safeTx = await safe.createTransaction({
-      safeTransactionData: dropExpTransactionData
+      safeTransactionData
     });
 
     const txRes = await safe.executeTransaction(safeTx);

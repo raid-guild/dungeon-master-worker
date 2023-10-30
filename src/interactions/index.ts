@@ -1,12 +1,16 @@
 import {
   ChatInputCommandInteraction,
+  GuildMember,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
 import { executeQueryInteraction } from '@/commands';
-import { getPlayerAddressByDiscordHandle } from '@/lib';
-import { dropExp, getCharacterAccountByPlayerAddress } from '@/lib/csHelpers';
+import {
+  dropExp,
+  getCharacterAccountsByPlayerAddresses,
+  getPlayerAddressesByDiscordHandles
+} from '@/lib';
 import { ClientWithCommands } from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
@@ -46,32 +50,46 @@ export const tipXpInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  const memberId = (interaction.options.get('member')?.value ?? '') as string;
-  const discordMember = interaction.guild?.members.cache.get(memberId);
-  const discordUsername = discordMember?.user.tag;
+  const recipients = (interaction.options.get('recipients')?.value ??
+    '') as string;
+  const recipientArray = recipients.split(' ');
+  const recipientIds = recipientArray.map(r => r.replace(/<@!?(\d+)>/, '$1'));
 
-  if (!discordUsername) {
+  const discordMembers = recipientIds.map(id =>
+    interaction.guild?.members.cache.get(id)
+  );
+
+  const discordUsernames = discordMembers.map(m => m?.user.tag);
+
+  if (discordMembers.some(m => !m) || discordUsernames.some(m => !m)) {
     await interaction.followUp({
-      content: 'Could not find Discord user!'
+      content: 'Some discord handles were not formatted correctly!'
     });
     return;
   }
 
-  const playerAddress = await getPlayerAddressByDiscordHandle(
-    client,
-    interaction,
-    discordMember
-  );
-  if (!playerAddress) return;
+  const [discordTagToEthAddressMap, discordTagsWithoutEthAddress] =
+    await getPlayerAddressesByDiscordHandles(
+      client,
+      interaction,
+      discordMembers as GuildMember[]
+    );
 
-  const accountAddress = await getCharacterAccountByPlayerAddress(
-    client,
-    interaction,
-    playerAddress
-  );
-  if (!accountAddress) return;
+  if (!discordTagToEthAddressMap) return;
+  const playerAddresses = Object.values(discordTagToEthAddressMap);
+  if (!playerAddresses) return;
 
-  const tx = await dropExp(client, interaction, accountAddress);
+  const [discordTagToCharacterAccountMap, discordTagsWithoutCharacterAccounts] =
+    await getCharacterAccountsByPlayerAddresses(
+      client,
+      interaction,
+      discordTagToEthAddressMap
+    );
+  if (!discordTagToCharacterAccountMap) return;
+  const accountAddresses = Object.values(discordTagToCharacterAccountMap);
+  if (!accountAddresses) return;
+
+  const tx = await dropExp(client, interaction, accountAddresses);
   if (!tx) return;
 
   const txHash = tx.hash;
@@ -88,12 +106,50 @@ export const tipXpInteraction = async (
 
   if (!txReceipt.status) {
     await interaction.followUp({
-      content: `Transaction failed!`
+      content: `Transaction failed! ${
+        EXPLORER_URL &&
+        `View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      }`
     });
     return;
   }
 
-  await interaction.followUp({
-    content: `Transaction succeeded! <@${discordMember.id}> has been tipped 5 XP!`
+  const senderId = interaction.user.id;
+
+  const discordMembersSuccessfullyTipped = discordMembers.filter(
+    m => !discordTagsWithoutCharacterAccounts?.includes(m?.user.tag as string)
+  );
+  const discordIdsSuccessfullyTipped = discordMembersSuccessfullyTipped.map(
+    m => m?.user.id
+  );
+
+  const discordMembersNotInDm = discordMembers.filter(m =>
+    discordTagsWithoutEthAddress?.includes(m?.user.tag as string)
+  );
+  const discordIdsNotInDm = discordMembersNotInDm.map(m => m?.user.id);
+
+  const discordMembersNotInCs = discordMembers.filter(m =>
+    discordTagsWithoutCharacterAccounts?.includes(m?.user.tag as string)
+  );
+  const discordIdsNotInCs = discordMembersNotInCs.map(m => m?.user.id);
+
+  const dmFailureMessage =
+    discordIdsNotInDm.length > 0
+      ? `\nThe following users were not found in DungeonMaster: ${discordIdsNotInDm.map(
+          id => `<@${id}>`
+        )}.`
+      : '';
+
+  const csFailureMessage =
+    discordIdsNotInCs.length > 0
+      ? `\nThe following users were not found in CharacterSheets: ${discordIdsNotInCs.map(
+          id => `<@${id}>`
+        )}.`
+      : '';
+
+  await interaction.editReply({
+    content: `Tipping succeeded! <@${senderId}> tipped 5 XP to the characters of ${discordIdsSuccessfullyTipped.map(
+      id => `<@${id}>`
+    )}.${dmFailureMessage}${csFailureMessage}`
   });
 };

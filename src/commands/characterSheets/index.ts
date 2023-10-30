@@ -3,11 +3,11 @@ import { CacheType, CommandInteraction, SlashCommandBuilder } from 'discord.js';
 export const tipXpCommand = new SlashCommandBuilder()
   .setName('tip-xp')
   .setDescription('Gives a fellow member 5 XP (CharacterSheets')
-  .addUserOption(option =>
+  .addStringOption(option =>
     option
-      .setName('member')
+      .setName('recipients')
       .setDescription(
-        'Any member who has an existing character in CharacterSheets'
+        'Use @mention to tip an existing character in CharacterSheets'
       )
       .setRequired(true)
   );

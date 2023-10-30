@@ -19,19 +19,25 @@ if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
   );
 }
 
-export const getPlayerAddressByDiscordHandle = async (
+export const getPlayerAddressesByDiscordHandles = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
-  discordMember: GuildMember
-): Promise<string | null> => {
+  discordMembers: GuildMember[]
+): Promise<[Record<string, string> | null, string[] | null]> => {
   try {
+    const discordUsernames = discordMembers.map(m => m?.user.tag);
     const query = `
       query MemberQuery {
-        members(where: { contact_info: { discord: { _eq: ${discordMember.user.tag}}}}) {
+        members(where: { contact_info: { discord: { _in: ${JSON.stringify(
+          discordUsernames
+        )}}}}) {
           eth_address
+          contact_info {
+            discord
+          }
         }
       }
     `;
@@ -53,21 +59,33 @@ export const getPlayerAddressByDiscordHandle = async (
       throw new Error(JSON.stringify(response.data.errors));
     }
 
-    const ethAddress = response.data.data.members[0]?.eth_address as
-      | string
-      | undefined;
+    const { members } = response.data.data;
 
-    if (!ethAddress) {
-      throw new Error(`No eth address found for <@${discordMember.id}>`);
-    }
-    return ethAddress;
+    const discordTagToEthAddressMap = members.reduce(
+      (
+        acc: Record<string, string>,
+        member: { eth_address: string; contact_info: { discord: string } }
+      ) => {
+        const { discord } = member.contact_info;
+        const { eth_address: ethAddress } = member;
+        acc[discord] = ethAddress;
+        return acc;
+      },
+      {}
+    );
+
+    const discordTagsWithoutEthAddress = discordUsernames.filter(
+      discordTag => !discordTagToEthAddressMap[discordTag]
+    );
+
+    return [discordTagToEthAddressMap, discordTagsWithoutEthAddress];
   } catch (err) {
     logError(
       client,
       interaction,
       err,
-      `There was an error finding an ETH address associated with <@${discordMember.id}> in DungeonMaster!`
+      `There was an error querying ETH addresses in DungeonMaster using Discord handles!`
     );
-    return null;
+    return [null, null];
   }
 };
