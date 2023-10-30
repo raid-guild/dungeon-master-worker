@@ -1,5 +1,6 @@
 import {
   ChatInputCommandInteraction,
+  EmbedBuilder,
   GuildMember,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
@@ -50,6 +51,11 @@ export const tipXpInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
+  if (!EXPLORER_URL) {
+    discordLogger('Missing EXPLORER_URL env', client);
+    return;
+  }
+
   const recipients = (interaction.options.get('recipients')?.value ??
     '') as string;
   const recipientArray = recipients.split(' ');
@@ -94,22 +100,34 @@ export const tipXpInteraction = async (
 
   const txHash = tx.hash;
 
-  if (EXPLORER_URL) {
-    await interaction.followUp({
-      content: `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-    });
-  } else {
-    discordLogger('Missing EXPLORER_URL env', client);
-  }
+  let embed = new EmbedBuilder()
+    .setTitle('XP tipping transaction pending...')
+    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setDescription(
+      `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+    )
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.followUp({
+    embeds: [embed]
+  });
 
   const txReceipt = await tx.wait();
 
   if (!txReceipt.status) {
-    await interaction.followUp({
-      content: `Transaction failed! ${
-        EXPLORER_URL &&
-        `View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-      }`
+    embed = new EmbedBuilder()
+      .setTitle('XP tipping transaction failed!')
+      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setDescription(
+        `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.editReply({
+      content: '',
+      embeds: [embed]
     });
     return;
   }
@@ -135,21 +153,31 @@ export const tipXpInteraction = async (
 
   const dmFailureMessage =
     discordIdsNotInDm.length > 0
-      ? `\nThe following users were not found in DungeonMaster: ${discordIdsNotInDm.map(
+      ? `\n---\nThe following users were not found in DungeonMaster: ${discordIdsNotInDm.map(
           id => `<@${id}>`
         )}.`
       : '';
 
   const csFailureMessage =
     discordIdsNotInCs.length > 0
-      ? `\nThe following users were not found in CharacterSheets: ${discordIdsNotInCs.map(
+      ? `\n---\nThe following users were not found in CharacterSheets: ${discordIdsNotInCs.map(
           id => `<@${id}>`
         )}.`
       : '';
 
+  embed = new EmbedBuilder()
+    .setTitle('XP tipping succeeded!')
+    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setDescription(
+      `**<@${senderId}>** tipped 5 XP to the characters of ${discordIdsSuccessfullyTipped.map(
+        id => `<@${id}>`
+      )}.${dmFailureMessage}${csFailureMessage}`
+    )
+    .setColor('#ff3864')
+    .setTimestamp();
+
   await interaction.editReply({
-    content: `Tipping succeeded! <@${senderId}> tipped 5 XP to the characters of ${discordIdsSuccessfullyTipped.map(
-      id => `<@${id}>`
-    )}.${dmFailureMessage}${csFailureMessage}`
+    content: '',
+    embeds: [embed]
   });
 };
