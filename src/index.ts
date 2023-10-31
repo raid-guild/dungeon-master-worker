@@ -1,13 +1,13 @@
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
-import { executeQueryInteraction, queryCommand } from '@/commands';
+import { queryCommand, tipXpCommand } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
+import { queryInteraction, tipXpInteraction } from '@/interactions';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
   DISCORD_DM_TOKEN
 } from '@/utils/constants';
-import { discordLogger } from '@/utils/logger';
 
 export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
@@ -15,6 +15,7 @@ export const setupDungeonMasterWorker = () => {
   });
   client.commands = new Collection();
   client.commands.set(queryCommand.name, queryCommand);
+  client.commands.set(tipXpCommand.name, tipXpCommand);
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -25,7 +26,7 @@ export const setupDungeonMasterWorker = () => {
 
     const command = (interaction.client as ClientWithCommands).commands?.get(
       interaction.commandName
-    );
+    ) as { name: string } | undefined;
 
     if (!command) {
       console.log(`Command ${interaction.commandName} not found`);
@@ -48,34 +49,18 @@ export const setupDungeonMasterWorker = () => {
 
     await interaction.deferReply();
 
-    const prompt = interaction.options.get('prompt')?.value as string;
-
-    if (!prompt) {
-      await interaction.followUp({
-        content: 'You must provide a prompt!'
-      });
-      return;
-    }
-
-    try {
-      await executeQueryInteraction(interaction, prompt);
-    } catch (error) {
-      console.error(error);
-      discordLogger(error, client);
-      if (interaction.replied || interaction.deferred) {
+    switch (command.name) {
+      case queryCommand.name:
+        await queryInteraction(client, interaction);
+        break;
+      case tipXpCommand.name:
+        await tipXpInteraction(client, interaction);
+        break;
+      default:
         await interaction.followUp({
-          content: `
-            Original query: ${prompt}\n\nThere was an error while generating a response!
-          `
+          content: 'Command not found!'
         });
-      } else {
-        discordLogger(error, client);
-        await interaction.reply({
-          content: `
-            Original query: ${prompt}\n\nThere was an error while generating a response!
-          `
-        });
-      }
+        break;
     }
   });
 
