@@ -1,8 +1,8 @@
-import { CacheType, CommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 
 export const tipXpCommand = new SlashCommandBuilder()
   .setName('tip-xp')
-  .setDescription('Gives a fellow member 5 XP (CharacterSheets')
+  .setDescription('Gives a fellow member 10 XP (CharacterSheets')
   .addStringOption(option =>
     option
       .setName('recipients')
@@ -12,8 +12,8 @@ export const tipXpCommand = new SlashCommandBuilder()
       .setRequired(true)
   );
 
-export const executeTipXpInteraction = async (
-  interaction: CommandInteraction<CacheType>
-) => {
-  await interaction.followUp({ content: 'Character has been tipped!' });
-};
+export const tipXpAttendanceCommand = new SlashCommandBuilder()
+  .setName('tip-xp-attendance')
+  .setDescription(
+    'Gives the characters of everyone in this voice channel 20 XP'
+  );

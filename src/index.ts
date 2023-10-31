@@ -1,8 +1,12 @@
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
-import { queryCommand, tipXpCommand } from '@/commands';
+import { queryCommand, tipXpAttendanceCommand, tipXpCommand } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
-import { queryInteraction, tipXpInteraction } from '@/interactions';
+import {
+  queryInteraction,
+  tipXpAttendanceInteraction,
+  tipXpInteraction
+} from '@/interactions';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
@@ -16,6 +20,7 @@ export const setupDungeonMasterWorker = () => {
   client.commands = new Collection();
   client.commands.set(queryCommand.name, queryCommand);
   client.commands.set(tipXpCommand.name, tipXpCommand);
+  client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -35,10 +40,15 @@ export const setupDungeonMasterWorker = () => {
 
     const channelId = interaction.channel?.id;
     const channel = interaction.guild?.channels.cache.get(channelId ?? '');
+    const allowedAnywhereCommands = [
+      tipXpCommand.name,
+      tipXpAttendanceCommand.name
+    ];
 
     if (
       channel?.parentId &&
-      !DISCORD_ALLOWED_PARENT_CHANNEL_IDS.includes(channel.parentId)
+      !DISCORD_ALLOWED_PARENT_CHANNEL_IDS.includes(channel.parentId) &&
+      !allowedAnywhereCommands.includes(command.name)
     ) {
       await interaction.reply({
         content: 'You cannot use DungeonMaster in this channel!',
@@ -55,6 +65,9 @@ export const setupDungeonMasterWorker = () => {
         break;
       case tipXpCommand.name:
         await tipXpInteraction(client, interaction);
+        break;
+      case tipXpAttendanceCommand.name:
+        await tipXpAttendanceInteraction(client, interaction);
         break;
       default:
         await interaction.followUp({

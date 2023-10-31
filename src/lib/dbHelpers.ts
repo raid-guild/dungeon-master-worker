@@ -7,25 +7,38 @@ const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
 
 export const checkUserNeedsCooldown = async (
   client: ClientWithCommands,
-  senderId: string
-): Promise<{ needsCooldown: boolean; endTime: string }> => {
+  tableName: string,
+  senderId?: string
+): Promise<{
+  needsCooldown: boolean;
+  endTime: string;
+  lastSenderDiscordId: string;
+}> => {
   try {
     const dbClient = await dbPromise;
-    const result = await dbClient.collection('latestXpTips').findOne({
-      tipperDiscordId: senderId
-    });
+    const result = await dbClient
+      .collection(tableName)
+      .findOne(senderId ? { senderId } : {});
     if (!result) {
-      return { needsCooldown: false, endTime: '' };
+      return { needsCooldown: false, endTime: '', lastSenderDiscordId: '' };
     }
 
-    const { timestamp } = result;
+    const { timestamp, senderDiscordId } = result;
     const now = Date.now();
     if (now - timestamp > COOLDOWN_TIME) {
-      return { needsCooldown: false, endTime: '' };
+      return {
+        needsCooldown: false,
+        endTime: '',
+        lastSenderDiscordId: senderDiscordId
+      };
     }
 
     const endTime = new Date(timestamp + COOLDOWN_TIME).toLocaleString();
-    return { needsCooldown: true, endTime };
+    return {
+      needsCooldown: true,
+      endTime,
+      lastSenderDiscordId: senderDiscordId
+    };
   } catch (err) {
     discordLogger(
       `Error checking if user needs cooldown: ${JSON.stringify({
@@ -33,33 +46,38 @@ export const checkUserNeedsCooldown = async (
       })}`,
       client
     );
-    return { needsCooldown: true, endTime: '' };
+    return { needsCooldown: true, endTime: '', lastSenderDiscordId: '' };
   }
 };
 
 export const updateLatestXpTip = async (
   client: ClientWithCommands,
-  senderId: string,
-  senderTag: string,
-  txHash: string
+  collectionName: string,
+  data: {
+    lastSenderDiscordId: string;
+    newSenderDiscordId: string;
+    senderDiscordTag: string;
+    txHash: string;
+  }
 ) => {
+  const { lastSenderDiscordId, newSenderDiscordId, senderDiscordTag, txHash } =
+    data;
   try {
     const dbClient = await dbPromise;
-    const result = await dbClient.collection('latestXpTips').findOneAndUpdate(
+    const result = await dbClient.collection(collectionName).findOneAndUpdate(
       {
-        tipperDiscordId: senderId
+        senderDiscordId: lastSenderDiscordId
       },
       {
         $set: {
-          tipperDiscordId: senderId,
-          discordTag: senderTag,
+          senderDiscordId: newSenderDiscordId,
+          senderDiscordTag,
           txHash,
           timestamp: Date.now()
         }
       },
       {
-        upsert: true,
-        returnDocument: 'after'
+        upsert: true
       }
     );
     if (!result) {
@@ -67,9 +85,9 @@ export const updateLatestXpTip = async (
     }
   } catch (err) {
     discordLogger(
-      `Error saving latest XP tip to db: ${JSON.stringify({
-        senderId,
-        discordTag: senderTag,
+      `Error saving latest attendance XP tip to db: ${JSON.stringify({
+        newSenderDiscordId,
+        senderDiscordTag,
         txHash,
         timestamp: Date.now()
       })}`,

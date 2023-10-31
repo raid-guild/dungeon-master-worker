@@ -119,7 +119,10 @@ export const getNpcGnosisSafe = async () => {
   return safe;
 };
 
-const buildDropExpTransactionData = (accountAddress: string) => {
+const buildDropExpTransactionData = (
+  accountAddress: string,
+  amount: string
+) => {
   const abi = parseAbi([
     'function dropExp(address character, uint256 amount) public'
   ]);
@@ -127,7 +130,7 @@ const buildDropExpTransactionData = (accountAddress: string) => {
   const data = encodeFunctionData({
     abi,
     functionName: 'dropExp',
-    args: [accountAddress as Address, BigInt(5)]
+    args: [accountAddress as Address, BigInt(amount)]
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
@@ -145,12 +148,13 @@ export const dropExp = async (
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
-  accountAddresses: string[]
+  accountAddresses: string[],
+  amount: string
 ) => {
   const safe = await getNpcGnosisSafe();
 
   const safeTransactionData = accountAddresses.map(accountAddress => {
-    return buildDropExpTransactionData(accountAddress);
+    return buildDropExpTransactionData(accountAddress, amount);
   });
 
   try {
