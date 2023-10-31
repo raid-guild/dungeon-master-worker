@@ -1,5 +1,5 @@
 export {
-  executeTipXpInteraction,
+  tipXpAttendanceCommand,
   tipXpCommand
 } from '@/commands/characterSheets';
 export {

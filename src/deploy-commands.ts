@@ -1,13 +1,17 @@
 import { REST, Routes } from 'discord.js';
 
-import { queryCommand, tipXpCommand } from '@/commands';
+import { queryCommand, tipXpAttendanceCommand, tipXpCommand } from '@/commands';
 import {
   DISCORD_DM_CLIENT_ID,
   DISCORD_DM_TOKEN,
   DISCORD_GUILD_ID
 } from '@/utils/constants';
 
-const commands = [queryCommand.toJSON(), tipXpCommand.toJSON()];
+const commands = [
+  queryCommand.toJSON(),
+  tipXpCommand.toJSON(),
+  tipXpAttendanceCommand.toJSON()
+];
 
 const rest = new REST().setToken(DISCORD_DM_TOKEN);
 
