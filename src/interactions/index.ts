@@ -8,9 +8,11 @@ import {
 
 import { executeQueryInteraction } from '@/commands';
 import {
+  checkUserNeedsCooldown,
   dropExp,
   getCharacterAccountsByPlayerAddresses,
-  getPlayerAddressesByDiscordHandles
+  getPlayerAddressesByDiscordHandles,
+  updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
@@ -53,6 +55,31 @@ export const tipXpInteraction = async (
 ) => {
   if (!EXPLORER_URL) {
     discordLogger('Missing EXPLORER_URL env', client);
+    return;
+  }
+
+  const senderId = interaction.user.id;
+  const { needsCooldown, endTime } = await checkUserNeedsCooldown(
+    client,
+    senderId
+  );
+
+  if (needsCooldown) {
+    const embed = new EmbedBuilder()
+      .setTitle('XP Tipping Cooldown')
+      .setDescription(
+        `You must wait ${
+          endTime
+            ? `until ${endTime} to tip again.`
+            : '24 hours between tipping.'
+        } `
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.followUp({
+      embeds: [embed]
+    });
     return;
   }
 
@@ -155,8 +182,6 @@ export const tipXpInteraction = async (
     return;
   }
 
-  const senderId = interaction.user.id;
-
   const discordMembersSuccessfullyTipped = discordMembers.filter(
     m => !discordTagsWithoutCharacterAccounts?.includes(m?.user.tag as string)
   );
@@ -198,6 +223,8 @@ export const tipXpInteraction = async (
     )
     .setColor('#ff3864')
     .setTimestamp();
+
+  await updateLatestXpTip(client, senderId, interaction.user.tag, txHash);
 
   await interaction.editReply({
     embeds: [embed]
