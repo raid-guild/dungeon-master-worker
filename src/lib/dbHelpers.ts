@@ -3,8 +3,7 @@ import { ClientWithCommands } from '@/types';
 import { discordLogger } from '@/utils/logger';
 
 // You must wait 24 hours between tips
-// const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
-const COOLDOWN_TIME = 1 * 60 * 1000;
+const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
 
 export const checkUserNeedsCooldown = async (
   client: ClientWithCommands,
