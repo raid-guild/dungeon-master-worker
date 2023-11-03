@@ -6,6 +6,7 @@ import {
   UserContextMenuCommandInteraction,
   VoiceBasedChannel
 } from 'discord.js';
+import { getAddress } from 'viem';
 
 import {
   checkUserNeedsCooldown,
@@ -15,7 +16,7 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import { EXPLORER_URL, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const tipXpInteraction = async (
@@ -205,10 +206,14 @@ export const tipXpInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
+  const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
+
   const data = {
     lastSenderDiscordId: senderId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
+    gameAddress,
+    chainId: '5',
     txHash
   };
 
@@ -382,10 +387,14 @@ export const tipXpAttendanceInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
+  const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
+
   const data = {
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
+    gameAddress,
+    chainId: '5',
     txHash
   };
 

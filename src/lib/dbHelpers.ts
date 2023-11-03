@@ -57,11 +57,19 @@ export const updateLatestXpTip = async (
     lastSenderDiscordId: string;
     newSenderDiscordId: string;
     senderDiscordTag: string;
+    gameAddress: string;
+    chainId: string;
     txHash: string;
   }
 ) => {
-  const { lastSenderDiscordId, newSenderDiscordId, senderDiscordTag, txHash } =
-    data;
+  const {
+    lastSenderDiscordId,
+    newSenderDiscordId,
+    senderDiscordTag,
+    gameAddress,
+    chainId,
+    txHash
+  } = data;
   try {
     const dbClient = await dbPromise;
     const result = await dbClient.collection(collectionName).findOneAndUpdate(
@@ -72,6 +80,8 @@ export const updateLatestXpTip = async (
         $set: {
           senderDiscordId: newSenderDiscordId,
           senderDiscordTag,
+          gameAddress,
+          chainId,
           txHash,
           timestamp: Date.now()
         }

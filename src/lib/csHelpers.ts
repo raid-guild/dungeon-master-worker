@@ -169,12 +169,7 @@ export const dropExp = async (
 
     return tx;
   } catch (err) {
-    logError(
-      client,
-      interaction,
-      err,
-      'There was an error finding a character account address associated with that Discord handle in CharacterSheets!'
-    );
+    logError(client, interaction, err, 'There was an error dropping XP!');
     return null;
   }
 };
