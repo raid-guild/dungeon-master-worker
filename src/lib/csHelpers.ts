@@ -35,11 +35,14 @@ export const getCharacterAccountsByPlayerAddresses = async (
   discordTagToEthAddressMap: Record<string, string>
 ): Promise<[Record<string, string> | null, string[] | null]> => {
   try {
-    const playerAddress = Object.values(discordTagToEthAddressMap);
+    const playerAddresses = Object.values(discordTagToEthAddressMap);
+    const formattedAddresses = playerAddresses.map(address => {
+      return address.toLowerCase();
+    });
     const query = `
       query CharacterAccountQuery {
         characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player_in: ${JSON.stringify(
-      playerAddress
+      formattedAddresses
     )}}) {
           account
           player
