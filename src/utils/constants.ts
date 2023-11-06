@@ -45,3 +45,7 @@ export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
 export const RPC_URL = process.env.RPC_URL ?? '';
 export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
 export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
+
+export const COOLDOWN_TIME = process.env.COOLDOWN_TIME
+  ? Number(process.env.COOLDOWN_TIME)
+  : 24 * 60 * 60 * 1000;
