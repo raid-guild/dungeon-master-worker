@@ -1,9 +1,9 @@
+import { getAddress } from 'viem';
+
 import { dbPromise } from '@/lib/mongodb';
 import { ClientWithCommands } from '@/types';
+import { COOLDOWN_TIME, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-
-// You must wait 24 hours between tips
-const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
 
 export const checkUserNeedsCooldown = async (
   client: ClientWithCommands,
@@ -15,10 +15,11 @@ export const checkUserNeedsCooldown = async (
   lastSenderDiscordId: string;
 }> => {
   try {
+    const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
     const result = await dbClient
       .collection(tableName)
-      .findOne(senderId ? { senderId } : {});
+      .findOne(senderId ? { senderId, gameAddress } : { gameAddress });
     if (!result) {
       return { needsCooldown: false, endTime: '', lastSenderDiscordId: '' };
     }
@@ -57,7 +58,6 @@ export const updateLatestXpTip = async (
     lastSenderDiscordId: string;
     newSenderDiscordId: string;
     senderDiscordTag: string;
-    gameAddress: string;
     chainId: string;
     txHash: string;
   }
@@ -66,15 +66,16 @@ export const updateLatestXpTip = async (
     lastSenderDiscordId,
     newSenderDiscordId,
     senderDiscordTag,
-    gameAddress,
     chainId,
     txHash
   } = data;
   try {
+    const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
     const result = await dbClient.collection(collectionName).findOneAndUpdate(
       {
-        senderDiscordId: lastSenderDiscordId
+        senderDiscordId: lastSenderDiscordId,
+        gameAddress
       },
       {
         $set: {

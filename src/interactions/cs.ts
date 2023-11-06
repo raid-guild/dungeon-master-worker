@@ -132,7 +132,7 @@ export const tipXpInteraction = async (
       .setDescription(
         `No characters were found for the following users: ${discordMembers.map(
           m => `<@${m?.id}>`
-        )}.\n---\nIf you think this is an error, ensure that your Discord handle and ETH address is registered correctly in DungeonMaster.`
+        )}.\n---\nIf you think this is an error, ensure that your Discord handle and ETH address are registered correctly in DungeonMaster.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -223,13 +223,10 @@ export const tipXpInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
-  const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
-
   const data = {
     lastSenderDiscordId: senderId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    gameAddress,
     chainId: '5',
     txHash
   };
@@ -316,7 +313,7 @@ export const tipXpAttendanceInteraction = async (
     const embed = new EmbedBuilder()
       .setTitle('Not a Member')
       .setDescription(
-        `You are not a member of RaidGuild! If you think this is an error, ensure that your Discord handle and ETH address is registered correctly in DungeonMaster.`
+        `You are not a member of RaidGuild! If you think this is an error, ensure that your Discord handle and ETH address are registered correctly in DungeonMaster.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -347,6 +344,23 @@ export const tipXpAttendanceInteraction = async (
   if (!discordTagToCharacterAccountMap) return;
   const accountAddresses = Object.values(discordTagToCharacterAccountMap);
   if (!accountAddresses) return;
+
+  if (accountAddresses.length === 0) {
+    const embed = new EmbedBuilder()
+      .setTitle('No Characters Found')
+      .setDescription(
+        `No characters were found for the following users: ${discordMembers.map(
+          m => `<@${m?.id}>`
+        )}.\n---\nIf you think this is an error, ensure that your Discord handle and ETH address are registered correctly in DungeonMaster.`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.followUp({
+      embeds: [embed]
+    });
+    return;
+  }
 
   const tx = await dropExp(client, interaction, accountAddresses, TIP_AMOUNT);
   if (!tx) return;
