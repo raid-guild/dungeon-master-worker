@@ -15,7 +15,7 @@ import {
 
 export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
   });
   client.commands = new Collection();
   client.commands.set(queryCommand.name, queryCommand);
