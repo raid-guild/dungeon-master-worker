@@ -19,7 +19,9 @@ export const checkUserNeedsCooldown = async (
     const dbClient = await dbPromise;
     const result = await dbClient
       .collection(tableName)
-      .findOne(senderId ? { senderId, gameAddress } : { gameAddress });
+      .findOne(
+        senderId ? { senderDiscordId: senderId, gameAddress } : { gameAddress }
+      );
     if (!result) {
       return { needsCooldown: false, endTime: '', lastSenderDiscordId: '' };
     }
@@ -96,7 +98,7 @@ export const updateLatestXpTip = async (
     }
   } catch (err) {
     discordLogger(
-      `Error saving latest attendance XP tip to db: ${JSON.stringify({
+      `Error saving to ${collectionName} table in db: ${JSON.stringify({
         newSenderDiscordId,
         senderDiscordTag,
         txHash,
