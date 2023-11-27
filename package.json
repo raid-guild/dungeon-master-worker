@@ -1,6 +1,6 @@
 {
   "name": "dungeon-master-worker",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A bot worker for RaidGuild's DuneonMaster",
   "main": "index.js",
   "repository": "https://github.com/ECWireless/dungeon-master-worker.git",
