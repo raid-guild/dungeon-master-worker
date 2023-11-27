@@ -62,6 +62,7 @@ export const updateLatestXpTip = async (
     senderDiscordTag: string;
     chainId: string;
     txHash: string;
+    message: string;
   }
 ) => {
   const {
@@ -69,7 +70,8 @@ export const updateLatestXpTip = async (
     newSenderDiscordId,
     senderDiscordTag,
     chainId,
-    txHash
+    txHash,
+    message
   } = data;
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
@@ -86,6 +88,7 @@ export const updateLatestXpTip = async (
           gameAddress,
           chainId,
           txHash,
+          message,
           timestamp: Date.now()
         }
       },
