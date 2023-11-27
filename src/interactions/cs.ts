@@ -198,6 +198,9 @@ export const tipXpInteraction = async (
   );
   const discordIdsNotInCs = discordMembersNotInCs.map(m => m?.user.id);
 
+  const message = (interaction.options.get('message')?.value ?? '') as string;
+  const reasonMessage = message ? `\n---\nReason: ${message}` : '';
+
   const dmFailureMessage =
     discordIdsNotInDm.length > 0
       ? `\n---\nThe following users were not found in DungeonMaster: ${discordIdsNotInDm.map(
@@ -218,7 +221,7 @@ export const tipXpInteraction = async (
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to the characters of ${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
-      )}.${dmFailureMessage}${csFailureMessage}`
+      )}.${reasonMessage}${dmFailureMessage}${csFailureMessage}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -228,7 +231,8 @@ export const tipXpInteraction = async (
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
     chainId: '5',
-    txHash
+    txHash,
+    message
   };
 
   await updateLatestXpTip(client, 'latestXpTips', data);
@@ -426,7 +430,8 @@ export const tipXpAttendanceInteraction = async (
     senderDiscordTag: interaction.user.tag,
     gameAddress,
     chainId: '5',
-    txHash
+    txHash,
+    message: ''
   };
 
   await updateLatestXpTip(client, TABLE_NAME, data);

@@ -10,6 +10,12 @@ export const tipXpCommand = new SlashCommandBuilder()
         'Use @mention to tip an existing character in CharacterSheets'
       )
       .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('message')
+      .setDescription('Give a reason for your tip')
+      .setRequired(false)
   );
 
 export const tipXpAttendanceCommand = new SlashCommandBuilder()
