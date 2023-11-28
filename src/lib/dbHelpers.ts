@@ -13,6 +13,8 @@ export const checkUserNeedsCooldown = async (
   needsCooldown: boolean;
   endTime: string;
   lastSenderDiscordId: string;
+  proposalActive?: boolean;
+  proposalExpiration?: number;
 }> => {
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
@@ -26,8 +28,29 @@ export const checkUserNeedsCooldown = async (
       return { needsCooldown: false, endTime: '', lastSenderDiscordId: '' };
     }
 
-    const { timestamp, senderDiscordId } = result;
+    const { timestamp, senderDiscordId, txHash, proposalExpiration } = result;
     const now = Date.now();
+
+    if (!txHash && proposalExpiration && now > Number(proposalExpiration)) {
+      return {
+        needsCooldown: false,
+        endTime: '',
+        lastSenderDiscordId: senderDiscordId,
+        proposalActive: false,
+        proposalExpiration: Number(proposalExpiration)
+      };
+    }
+
+    if (!txHash && proposalExpiration && now < Number(proposalExpiration)) {
+      return {
+        needsCooldown: false,
+        endTime: '',
+        lastSenderDiscordId: senderDiscordId,
+        proposalActive: true,
+        proposalExpiration: Number(proposalExpiration)
+      };
+    }
+
     if (now - timestamp > COOLDOWN_TIME) {
       return {
         needsCooldown: false,
@@ -61,16 +84,12 @@ export const updateLatestXpTip = async (
     newSenderDiscordId: string;
     senderDiscordTag: string;
     chainId: string;
-    txHash: string;
+    txHash?: string;
+    messageId?: string;
   }
 ) => {
-  const {
-    lastSenderDiscordId,
-    newSenderDiscordId,
-    senderDiscordTag,
-    chainId,
-    txHash
-  } = data;
+  const { lastSenderDiscordId, newSenderDiscordId, senderDiscordTag, txHash } =
+    data;
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -81,11 +100,8 @@ export const updateLatestXpTip = async (
       },
       {
         $set: {
+          ...data,
           senderDiscordId: newSenderDiscordId,
-          senderDiscordTag,
-          gameAddress,
-          chainId,
-          txHash,
           timestamp: Date.now()
         }
       },

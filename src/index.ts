@@ -1,11 +1,17 @@
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
-import { queryCommand, tipXpAttendanceCommand, tipXpCommand } from '@/commands';
+import {
+  queryCommand,
+  tipXpAttendanceCommand,
+  tipXpCommand,
+  tipXpMcCommand
+} from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import {
   queryInteraction,
   tipXpAttendanceInteraction,
-  tipXpInteraction
+  tipXpInteraction,
+  tipXpMcInteraction
 } from '@/interactions';
 import { ClientWithCommands } from '@/types';
 import {
@@ -21,6 +27,7 @@ export const setupDungeonMasterWorker = () => {
   client.commands.set(queryCommand.name, queryCommand);
   client.commands.set(tipXpCommand.name, tipXpCommand);
   client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
+  client.commands.set(tipXpMcCommand.name, tipXpMcCommand);
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -42,7 +49,8 @@ export const setupDungeonMasterWorker = () => {
     const channel = interaction.guild?.channels.cache.get(channelId ?? '');
     const allowedAnywhereCommands = [
       tipXpCommand.name,
-      tipXpAttendanceCommand.name
+      tipXpAttendanceCommand.name,
+      tipXpMcCommand.name
     ];
 
     if (
@@ -68,6 +76,9 @@ export const setupDungeonMasterWorker = () => {
         break;
       case tipXpAttendanceCommand.name:
         await tipXpAttendanceInteraction(client, interaction);
+        break;
+      case tipXpMcCommand.name:
+        await tipXpMcInteraction(client, interaction);
         break;
       default:
         await interaction.followUp({
