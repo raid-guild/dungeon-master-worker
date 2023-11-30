@@ -1,4 +1,10 @@
-import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
+import {
+  Client,
+  Collection,
+  Events,
+  GatewayIntentBits,
+  Partials
+} from 'discord.js';
 
 import {
   queryCommand,
@@ -13,15 +19,24 @@ import {
   tipXpInteraction,
   tipXpMcInteraction
 } from '@/interactions';
+import { getMcTipProposal } from '@/lib/dbHelpers';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
-  DISCORD_DM_TOKEN
+  DISCORD_DM_TOKEN,
+  TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
+import { discordLogger } from '@/utils/logger';
 
 export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMessageReactions
+    ],
+    partials: [Partials.Message]
   });
   client.commands = new Collection();
   client.commands.set(queryCommand.name, queryCommand);
@@ -86,6 +101,30 @@ export const setupDungeonMasterWorker = () => {
         });
         break;
     }
+  });
+
+  client.on(Events.MessageReactionAdd, async reaction => {
+    if (reaction.partial) {
+      try {
+        await reaction.fetch();
+      } catch (error) {
+        discordLogger(error, client);
+        return;
+      }
+    }
+
+    const reactionUsers = await reaction.users.fetch();
+    const uniqueUsersCount = new Set(reactionUsers.keys()).size;
+
+    const mcTipProposal = await getMcTipProposal(client);
+
+    if (
+      uniqueUsersCount < TIP_PROPOSAL_REACTION_THRESHOLD ||
+      reaction.message.id !== mcTipProposal?.messageId
+    )
+      return;
+
+    console.log(`${uniqueUsersCount} users reacted! A tip will be sent!`);
   });
 
   client.login(DISCORD_DM_TOKEN);

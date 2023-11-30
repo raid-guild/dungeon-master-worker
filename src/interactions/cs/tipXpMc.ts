@@ -15,7 +15,11 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
+import {
+  EXPLORER_URL,
+  RAIDGUILD_GAME_ADDRESS,
+  TIP_PROPOSAL_REACTION_THRESHOLD
+} from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const tipXpMcInteraction = async (
@@ -208,7 +212,7 @@ export const tipXpMcInteraction = async (
     .setDescription(
       `<@${senderId}> is proposing to tip ${TIP_AMOUNT} XP to <@${
         meetingMcDiscordMembers[0]?.id
-      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. 5 emoji reactions are required for the tip to succeed.\n\nThis proposal will expire at ${new Date(
+      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. ${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions are required for the tip to succeed.\n\nThis proposal will expire at ${new Date(
         newProposalExpiration
       ).toLocaleString()}.`
     )

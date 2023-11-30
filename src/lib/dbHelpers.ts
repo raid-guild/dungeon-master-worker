@@ -1,3 +1,4 @@
+import { WithId } from 'mongodb';
 import { getAddress } from 'viem';
 
 import { dbPromise } from '@/lib/mongodb';
@@ -68,7 +69,7 @@ export const checkUserNeedsCooldown = async (
   } catch (err) {
     discordLogger(
       `Error checking if user needs cooldown: ${JSON.stringify({
-        senderId
+        err
       })}`,
       client
     );
@@ -88,8 +89,7 @@ export const updateLatestXpTip = async (
     messageId?: string;
   }
 ) => {
-  const { lastSenderDiscordId, newSenderDiscordId, senderDiscordTag, txHash } =
-    data;
+  const { lastSenderDiscordId, newSenderDiscordId } = data;
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -114,13 +114,27 @@ export const updateLatestXpTip = async (
     }
   } catch (err) {
     discordLogger(
-      `Error saving to ${collectionName} table in db: ${JSON.stringify({
-        newSenderDiscordId,
-        senderDiscordTag,
-        txHash,
-        timestamp: Date.now()
-      })}`,
+      `Error saving to ${collectionName} table in db: ${JSON.stringify(err)}`,
       client
     );
+  }
+};
+
+export const getMcTipProposal = async (
+  client: ClientWithCommands
+): Promise<WithId<{ messageId: string }> | null> => {
+  try {
+    const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
+    const dbClient = await dbPromise;
+    const result = await dbClient
+      .collection('latestXpMcTips')
+      .findOne({ gameAddress });
+    if (!result) {
+      return null;
+    }
+    return result as WithId<{ messageId: string }>;
+  } catch (err) {
+    discordLogger(`Error getting latestXpMcTips: ${err}`, client);
+    return null;
   }
 };
