@@ -49,3 +49,8 @@ export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
 export const COOLDOWN_TIME = process.env.COOLDOWN_TIME
   ? Number(process.env.COOLDOWN_TIME)
   : 24 * 60 * 60 * 1000;
+
+export const TIP_PROPOSAL_REACTION_THRESHOLD = process.env
+  .TIP_PROPOSAL_REACTION_THRESHOLD
+  ? Number(process.env.TIP_PROPOSAL_REACTION_THRESHOLD)
+  : 5;

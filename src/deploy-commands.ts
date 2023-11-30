@@ -1,6 +1,11 @@
 import { REST, Routes } from 'discord.js';
 
-import { queryCommand, tipXpAttendanceCommand, tipXpCommand } from '@/commands';
+import {
+  queryCommand,
+  tipXpAttendanceCommand,
+  tipXpCommand,
+  tipXpMcCommand
+} from '@/commands';
 import {
   DISCORD_DM_CLIENT_ID,
   DISCORD_DM_TOKEN,
@@ -9,6 +14,7 @@ import {
 
 const commands = [
   queryCommand.toJSON(),
+  tipXpMcCommand.toJSON(),
   tipXpCommand.toJSON(),
   tipXpAttendanceCommand.toJSON()
 ];
