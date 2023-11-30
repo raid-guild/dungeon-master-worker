@@ -143,7 +143,7 @@ export const tipXpAttendanceInteraction = async (
     return;
   }
 
-  const tx = await dropExp(client, interaction, accountAddresses, TIP_AMOUNT);
+  const tx = await dropExp(client, accountAddresses, TIP_AMOUNT);
   if (!tx) return;
 
   const txHash = tx.hash;
@@ -179,6 +179,8 @@ export const tipXpAttendanceInteraction = async (
     return;
   }
 
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org/games/gnosis/${RAIDGUILD_GAME_ADDRESS}`;
+
   const discordMembersSuccessfullyTipped = discordMembers.filter(
     m =>
       !discordTagsWithoutCharacterAccounts?.includes(m?.user.tag as string) &&
@@ -194,7 +196,7 @@ export const tipXpAttendanceInteraction = async (
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to all characters in this voice channe:\n${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
-      )}.\n---\nIf you did not receive a tip, you are either not a member of RaidGuild, not in DungeonMaster, or not in CharacterSheets.`
+      )}.${viewGameMessage}\n---\nIf you did not receive a tip, you are either not a member of RaidGuild, not in DungeonMaster, or not in CharacterSheets.`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -207,7 +209,8 @@ export const tipXpAttendanceInteraction = async (
     senderDiscordTag: interaction.user.tag,
     gameAddress,
     chainId: '5',
-    txHash
+    txHash,
+    message: ''
   };
 
   await updateLatestXpTip(client, TABLE_NAME, data);

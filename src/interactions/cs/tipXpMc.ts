@@ -12,7 +12,7 @@ import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
   getPlayerAddressesByDiscordHandles,
-  updateLatestXpTip
+  updateLatestXpMcTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
@@ -22,6 +22,8 @@ import {
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
+export const MC_XP_TIP_AMOUNT = '50';
+
 export const tipXpMcInteraction = async (
   client: ClientWithCommands,
   interaction:
@@ -29,10 +31,9 @@ export const tipXpMcInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  const TIP_AMOUNT = '50';
   const TABLE_NAME = 'latestXpMcTips';
 
-  const MINIMUM_ATTENDEES = 1;
+  const MINIMUM_ATTENDEES = 6;
   const PROPOSAL_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
 
   if (!EXPLORER_URL) {
@@ -210,9 +211,9 @@ export const tipXpMcInteraction = async (
   const embed = new EmbedBuilder()
     .setTitle('Meeting MC XP Tip Proposal')
     .setDescription(
-      `<@${senderId}> is proposing to tip ${TIP_AMOUNT} XP to <@${
+      `<@${senderId}> is proposing to tip ${MC_XP_TIP_AMOUNT} XP to <@${
         meetingMcDiscordMembers[0]?.id
-      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. ${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions are required for the tip to succeed.\n\nThis proposal will expire at ${new Date(
+      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
         newProposalExpiration
       ).toLocaleString()}.`
     )
@@ -231,9 +232,13 @@ export const tipXpMcInteraction = async (
     senderDiscordTag: interaction.user.tag,
     gameAddress,
     chainId: '5',
+    txHash: '',
     messageId: message.id,
-    proposalExpiration: newProposalExpiration
+    proposalExpiration: newProposalExpiration,
+    receivingDiscordId: meetingMcDiscordMembers[0]?.id,
+    receivingAddress: accountAddresses[0],
+    tipPending: false
   };
 
-  await updateLatestXpTip(client, TABLE_NAME, data);
+  await updateLatestXpMcTip(client, TABLE_NAME, data);
 };

@@ -85,11 +85,19 @@ export const updateLatestXpTip = async (
     newSenderDiscordId: string;
     senderDiscordTag: string;
     chainId: string;
-    txHash?: string;
-    messageId?: string;
+    txHash: string;
+    message: string;
   }
 ) => {
-  const { lastSenderDiscordId, newSenderDiscordId } = data;
+  const {
+    lastSenderDiscordId,
+    newSenderDiscordId,
+    senderDiscordTag,
+    chainId,
+    txHash,
+    message
+  } = data;
+
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -100,17 +108,119 @@ export const updateLatestXpTip = async (
       },
       {
         $set: {
-          ...data,
           senderDiscordId: newSenderDiscordId,
+          senderDiscordTag,
+          gameAddress,
+          chainId,
+          txHash,
+          message,
           timestamp: Date.now()
         }
       },
       {
+        returnDocument: 'after',
         upsert: true
       }
     );
     if (!result) {
-      throw new Error();
+      throw new Error('Tip data could not be updated!');
+    }
+  } catch (err) {
+    discordLogger(
+      `Error saving to ${collectionName} table in db: ${JSON.stringify(err)}`,
+      client
+    );
+  }
+};
+
+export type McTipData = {
+  senderDiscordId: string;
+  gameAddress: string;
+  timestamp: number;
+  txHash: string;
+  tipPending: boolean;
+  senderDiscordTag?: string;
+  chainId?: string;
+  messageId?: string;
+  proposalExpiration?: number;
+  receivingDiscordId?: string;
+  receivingAddress?: string;
+};
+
+export const updateLatestXpMcTip = async (
+  client: ClientWithCommands,
+  collectionName: string,
+  data: Omit<McTipData, 'senderDiscordId' | 'gameAddress' | 'timestamp'> & {
+    lastSenderDiscordId: string;
+    newSenderDiscordId: string;
+  }
+) => {
+  const {
+    lastSenderDiscordId,
+    newSenderDiscordId,
+    senderDiscordTag,
+    chainId,
+    txHash,
+    messageId,
+    proposalExpiration,
+    receivingDiscordId,
+    receivingAddress: _receivingAddress,
+    tipPending
+  } = data;
+
+  try {
+    const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
+
+    const updates: McTipData = {
+      senderDiscordId: newSenderDiscordId,
+      gameAddress,
+      txHash,
+      tipPending,
+      timestamp: Date.now()
+    };
+
+    if (senderDiscordTag) {
+      updates.senderDiscordTag = senderDiscordTag;
+    }
+
+    if (chainId) {
+      updates.chainId = chainId;
+    }
+
+    if (messageId) {
+      updates.messageId = messageId;
+    }
+
+    if (proposalExpiration) {
+      updates.proposalExpiration = proposalExpiration;
+    }
+
+    if (receivingDiscordId) {
+      updates.receivingDiscordId = receivingDiscordId;
+    }
+
+    if (_receivingAddress) {
+      const receivingAddress = getAddress(_receivingAddress);
+      updates.receivingAddress = receivingAddress;
+    }
+
+    const dbClient = await dbPromise;
+    const result = await dbClient.collection(collectionName).findOneAndUpdate(
+      {
+        senderDiscordId: lastSenderDiscordId,
+        gameAddress
+      },
+      {
+        $set: updates
+      },
+      {
+        returnDocument: 'after',
+        upsert: true
+      }
+    );
+
+    if (!result) {
+      throw new Error('Tip data could not be updated!');
     }
   } catch (err) {
     discordLogger(
@@ -122,7 +232,7 @@ export const updateLatestXpTip = async (
 
 export const getMcTipProposal = async (
   client: ClientWithCommands
-): Promise<WithId<{ messageId: string }> | null> => {
+): Promise<WithId<McTipData> | null> => {
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -132,7 +242,7 @@ export const getMcTipProposal = async (
     if (!result) {
       return null;
     }
-    return result as WithId<{ messageId: string }>;
+    return result as WithId<McTipData>;
   } catch (err) {
     discordLogger(`Error getting latestXpMcTips: ${err}`, client);
     return null;

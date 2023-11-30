@@ -14,7 +14,7 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import { EXPLORER_URL, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const tipXpInteraction = async (
@@ -141,7 +141,7 @@ export const tipXpInteraction = async (
     return;
   }
 
-  const tx = await dropExp(client, interaction, accountAddresses, TIP_AMOUNT);
+  const tx = await dropExp(client, accountAddresses, TIP_AMOUNT);
   if (!tx) return;
 
   const txHash = tx.hash;
@@ -196,6 +196,11 @@ export const tipXpInteraction = async (
   );
   const discordIdsNotInCs = discordMembersNotInCs.map(m => m?.user.id);
 
+  const message = (interaction.options.get('message')?.value ?? '') as string;
+  const reasonMessage = message ? `\n---\nReason: **${message}**` : '';
+
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org/games/gnosis/${RAIDGUILD_GAME_ADDRESS}`;
+
   const dmFailureMessage =
     discordIdsNotInDm.length > 0
       ? `\n---\nThe following users were not found in DungeonMaster: ${discordIdsNotInDm.map(
@@ -216,7 +221,7 @@ export const tipXpInteraction = async (
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to the characters of ${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
-      )}.${dmFailureMessage}${csFailureMessage}`
+      )}.${reasonMessage}${viewGameMessage}${dmFailureMessage}${csFailureMessage}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -226,7 +231,8 @@ export const tipXpInteraction = async (
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
     chainId: '5',
-    txHash
+    txHash,
+    message
   };
 
   await updateLatestXpTip(client, 'latestXpTips', data);
