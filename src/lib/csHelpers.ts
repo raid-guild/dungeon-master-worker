@@ -18,7 +18,7 @@ import {
   RPC_URL,
   XP_ADDRESS
 } from '@/utils/constants';
-import { logError } from '@/utils/logger';
+import { discordLogger, logError } from '@/utils/logger';
 
 if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
   throw new Error(
@@ -147,10 +147,6 @@ const buildDropExpTransactionData = (
 
 export const dropExp = async (
   client: ClientWithCommands,
-  interaction:
-    | ChatInputCommandInteraction
-    | MessageContextMenuCommandInteraction
-    | UserContextMenuCommandInteraction,
   accountAddresses: string[],
   amount: string
 ) => {
@@ -172,7 +168,7 @@ export const dropExp = async (
 
     return tx;
   } catch (err) {
-    logError(client, interaction, err, 'There was an error dropping XP!');
+    discordLogger(JSON.stringify(err), client);
     return null;
   }
 };

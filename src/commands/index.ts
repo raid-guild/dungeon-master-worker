@@ -1,6 +1,7 @@
 export {
   tipXpAttendanceCommand,
-  tipXpCommand
+  tipXpCommand,
+  tipXpMcCommand
 } from '@/commands/characterSheets';
 export {
   executeQueryInteraction,
