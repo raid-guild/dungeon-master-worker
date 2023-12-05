@@ -194,7 +194,7 @@ export const tipXpAttendanceInteraction = async (
     .setTitle('Attendance XP Tipping Succeeded!')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
-      `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to all characters in this voice channe:\n${discordIdsSuccessfullyTipped.map(
+      `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to all characters in this voice channel:\n${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
       )}.${viewGameMessage}\n---\nIf you did not receive a tip, you are either not a member of RaidGuild, not in DungeonMaster, or not in CharacterSheets.`
     )
