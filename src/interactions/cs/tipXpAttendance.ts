@@ -179,7 +179,7 @@ export const tipXpAttendanceInteraction = async (
     return;
   }
 
-  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org/games/gnosis/${RAIDGUILD_GAME_ADDRESS}`;
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
 
   const discordMembersSuccessfullyTipped = discordMembers.filter(
     m =>
