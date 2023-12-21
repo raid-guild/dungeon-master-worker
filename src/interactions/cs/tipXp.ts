@@ -14,7 +14,7 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
+import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const tipXpInteraction = async (
@@ -199,7 +199,7 @@ export const tipXpInteraction = async (
   const message = (interaction.options.get('message')?.value ?? '') as string;
   const reasonMessage = message ? `\n---\nReason: **${message}**` : '';
 
-  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org/games/gnosis/${RAIDGUILD_GAME_ADDRESS}`;
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
 
   const dmFailureMessage =
     discordIdsNotInDm.length > 0

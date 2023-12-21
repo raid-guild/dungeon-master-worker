@@ -29,7 +29,6 @@ import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
   DISCORD_DM_TOKEN,
   EXPLORER_URL,
-  RAIDGUILD_GAME_ADDRESS,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
@@ -145,7 +144,7 @@ export const setupDungeonMasterWorker = () => {
 
       if (Date.now() > proposalExpiration) {
         const embed = new EmbedBuilder()
-          .setTitle('MC XP Tipping Proposal Expired!')
+          .setTitle(':microphone2: MC XP Tipping Proposal Expired!')
           .setDescription(
             `The XP tipping proposal has expired. Please create a new proposal.`
           )
@@ -157,7 +156,7 @@ export const setupDungeonMasterWorker = () => {
       }
 
       let embed = new EmbedBuilder()
-        .setTitle('MC XP Tipping Pending...')
+        .setTitle(':microphone2: MC XP Tipping Pending...')
         .setColor('#ff3864')
         .setTimestamp();
 
@@ -194,7 +193,7 @@ export const setupDungeonMasterWorker = () => {
       const txHash = tx.hash;
 
       embed = new EmbedBuilder()
-        .setTitle('MC XP Tipping Transaction Pending...')
+        .setTitle(':microphone2: MC XP Tipping Transaction Pending...')
         .setURL(`${EXPLORER_URL}/tx/${txHash}`)
         .setDescription(
           `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -215,7 +214,7 @@ export const setupDungeonMasterWorker = () => {
         await updateLatestXpMcTip(client, 'latestXpMcTips', data);
 
         embed = new EmbedBuilder()
-          .setTitle('MC XP Tipping Transaction Failed!')
+          .setTitle(':microphone2: MC XP Tipping Transaction Failed!')
           .setURL(`${EXPLORER_URL}/tx/${txHash}`)
           .setDescription(
             `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -227,10 +226,10 @@ export const setupDungeonMasterWorker = () => {
         return;
       }
 
-      const viewGameMessage = `\n---\nView the game at https://play.raidguild.org/games/gnosis/${RAIDGUILD_GAME_ADDRESS}`;
+      const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
 
       embed = new EmbedBuilder()
-        .setTitle('MC XP Tipping Succeeded!')
+        .setTitle(':microphone2: MC XP Tipping Succeeded!')
         .setURL(`${EXPLORER_URL}/tx/${txHash}`)
         .setDescription(
           `<@${receivingDiscordId}>'s character received ${MC_XP_TIP_AMOUNT} XP for MC'ing this meeting.${viewGameMessage}`
