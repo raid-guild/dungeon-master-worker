@@ -52,7 +52,7 @@ export const tipXpMcInteraction = async (
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
-      .setTitle('Meeting MC XP Tip Proposal')
+      .setTitle(':microphone2: Meeting MC XP Tip Proposal')
       .setDescription(
         `There is already a proposal to tip the MC for this meeting. However, that proposal will expire at ${new Date(
           proposalExpiration ?? 0
@@ -69,7 +69,7 @@ export const tipXpMcInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('Meeting MC XP Tipping Cooldown')
+      .setTitle(':microphone2: Meeting MC XP Tipping Cooldown')
       .setDescription(
         `All members must wait ${
           endTime
@@ -209,11 +209,11 @@ export const tipXpMcInteraction = async (
 
   const newProposalExpiration = Date.now() + PROPOSAL_EXPIRATION_TIME;
   const embed = new EmbedBuilder()
-    .setTitle('Meeting MC XP Tip Proposal')
+    .setTitle(':microphone2: Meeting MC XP Tip Proposal')
     .setDescription(
       `<@${senderId}> is proposing to tip ${MC_XP_TIP_AMOUNT} XP to <@${
         meetingMcDiscordMembers[0]?.id
-      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
+      }> for MC'ing this meeting.\n\n@here To approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
         newProposalExpiration
       ).toLocaleString()}.`
     )
