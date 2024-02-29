@@ -46,6 +46,10 @@ export const RPC_URL = process.env.RPC_URL ?? '';
 export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
 export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
 
+export const SMART_INVOICE_SUBGRAPH_URL =
+  process.env.SMART_INVOICE_SUBGRAPH_URL ?? '';
+export const RAIDGUILD_DAO_ADDRESS = process.env.RAIDGUILD_DAO_ADDRESS ?? '';
+
 export const COOLDOWN_TIME = process.env.COOLDOWN_TIME
   ? Number(process.env.COOLDOWN_TIME)
   : 24 * 60 * 60 * 1000;

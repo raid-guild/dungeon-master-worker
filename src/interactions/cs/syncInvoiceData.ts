@@ -5,7 +5,10 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
+import { getIsInvoiceProviderRaidGuild } from '@/lib';
 import { ClientWithCommands } from '@/types';
+
+const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
 
 export const syncInvoiceDataInteraction = async (
   client: ClientWithCommands,
@@ -23,7 +26,14 @@ export const syncInvoiceDataInteraction = async (
     embeds: [embed]
   });
 
-  console.log(client);
+  const isInvoiceProviderRaidGuild = await getIsInvoiceProviderRaidGuild(
+    client,
+    TEMP_INVOICE_ADDRESS
+  );
+
+  if (!isInvoiceProviderRaidGuild) {
+    return;
+  }
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')
