@@ -1,4 +1,5 @@
 export {
+  syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
   tipXpInteraction,
   tipXpMcInteraction

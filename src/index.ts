@@ -10,6 +10,7 @@ import {
 
 import {
   queryCommand,
+  syncInvoiceDataCommand,
   tipXpAttendanceCommand,
   tipXpCommand,
   tipXpMcCommand
@@ -17,6 +18,7 @@ import {
 import { setupGuardWorker } from '@/guardWorker';
 import {
   queryInteraction,
+  syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
   tipXpInteraction,
   tipXpMcInteraction
@@ -45,6 +47,7 @@ export const setupDungeonMasterWorker = () => {
   });
   client.commands = new Collection();
   client.commands.set(queryCommand.name, queryCommand);
+  client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
   client.commands.set(tipXpCommand.name, tipXpCommand);
   client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
   client.commands.set(tipXpMcCommand.name, tipXpMcCommand);
@@ -90,6 +93,9 @@ export const setupDungeonMasterWorker = () => {
     switch (command.name) {
       case queryCommand.name:
         await queryInteraction(client, interaction);
+        break;
+      case syncInvoiceDataCommand.name:
+        await syncInvoiceDataInteraction(client, interaction);
         break;
       case tipXpCommand.name:
         await tipXpInteraction(client, interaction);

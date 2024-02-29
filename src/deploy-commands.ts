@@ -2,6 +2,7 @@ import { REST, Routes } from 'discord.js';
 
 import {
   queryCommand,
+  syncInvoiceDataCommand,
   tipXpAttendanceCommand,
   tipXpCommand,
   tipXpMcCommand
@@ -14,6 +15,7 @@ import {
 
 const commands = [
   queryCommand.toJSON(),
+  syncInvoiceDataCommand.toJSON(),
   tipXpMcCommand.toJSON(),
   tipXpCommand.toJSON(),
   tipXpAttendanceCommand.toJSON()
