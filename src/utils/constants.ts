@@ -49,6 +49,7 @@ export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
 export const SMART_INVOICE_SUBGRAPH_URL =
   process.env.SMART_INVOICE_SUBGRAPH_URL ?? '';
 export const RAIDGUILD_DAO_ADDRESS = process.env.RAIDGUILD_DAO_ADDRESS ?? '';
+export const SPLIT_SUBGRAPH_URL = process.env.SPLIT_SUBGRAPH_URL ?? '';
 
 export const COOLDOWN_TIME = process.env.COOLDOWN_TIME
   ? Number(process.env.COOLDOWN_TIME)

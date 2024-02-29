@@ -9,4 +9,11 @@ export {
   updateLatestXpTip
 } from '@/lib/dbHelpers';
 export { getPlayerAddressesByDiscordHandles } from '@/lib/dmHelpers';
-export { getIsInvoiceProviderRaidGuild } from '@/lib/smartInvoiceHelpers';
+export {
+  getAllRaidGuildInvoices,
+  getIsInvoiceProviderRaidGuild
+} from '@/lib/smartInvoiceHelpers';
+export {
+  getAllInvoicesWithPrimarySplit,
+  getAllInvoicesWithSecondarySplit
+} from '@/lib/splitsHelpers';

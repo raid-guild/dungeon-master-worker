@@ -5,7 +5,12 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
-import { getIsInvoiceProviderRaidGuild } from '@/lib';
+import {
+  getAllInvoicesWithPrimarySplit,
+  getAllInvoicesWithSecondarySplit,
+  getAllRaidGuildInvoices,
+  getIsInvoiceProviderRaidGuild
+} from '@/lib';
 import { ClientWithCommands } from '@/types';
 
 const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
@@ -34,6 +39,33 @@ export const syncInvoiceDataInteraction = async (
   if (!isInvoiceProviderRaidGuild) {
     return;
   }
+
+  const allRaidGuildInvoices = await getAllRaidGuildInvoices(client);
+
+  if (allRaidGuildInvoices.length === 0) {
+    return;
+  }
+
+  const allInvoicesWithSplitProviderReceiver =
+    await getAllInvoicesWithPrimarySplit(client, allRaidGuildInvoices);
+
+  if (allInvoicesWithSplitProviderReceiver.length === 0) {
+    return;
+  }
+
+  const allInvoicesWithSecondarySplitRecipients =
+    await getAllInvoicesWithSecondarySplit(
+      client,
+      allInvoicesWithSplitProviderReceiver
+    );
+
+  if (allInvoicesWithSecondarySplitRecipients.length === 0) {
+    return;
+  }
+
+  allInvoicesWithSecondarySplitRecipients.forEach(invoice => {
+    console.log(invoice);
+  });
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')
