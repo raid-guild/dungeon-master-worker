@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-import { ClientWithCommands, Invoice } from '@/types';
+import {
+  ClientWithCommands,
+  Invoice,
+  InvoiceDocument,
+  InvoiceWithSplits
+} from '@/types';
 import {
   RAIDGUILD_DAO_ADDRESS,
   SMART_INVOICE_SUBGRAPH_URL
@@ -63,6 +68,9 @@ export const getAllRaidGuildInvoices = async (
       invoices(where: { provider: "${RAIDGUILD_DAO_ADDRESS}" }) {
         id
         providerReceiver
+        releases {
+          amount
+        }
       }
     }
   `;
@@ -80,4 +88,21 @@ export const getAllRaidGuildInvoices = async (
     discordLogger(JSON.stringify(err), client);
     return [];
   }
+};
+
+export const formatInvoiceDocument = (
+  invoice: InvoiceWithSplits
+): Omit<InvoiceDocument, '_id'> => {
+  return {
+    address: invoice.id,
+    amount: invoice.releases
+      .reduce((acc, release) => acc + BigInt(release.amount), BigInt(0))
+      .toString(),
+
+    providerReceiver: invoice.providerReceiver,
+    primarySplitId: invoice.primarySplit.id,
+    primarySplitRecipients: invoice.primarySplit.recipients,
+    secondarySplitId: invoice.secondarySplit?.id ?? '',
+    secondarySplitRecipients: invoice.secondarySplit?.recipients ?? []
+  };
 };

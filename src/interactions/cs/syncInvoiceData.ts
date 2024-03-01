@@ -6,6 +6,7 @@ import {
 } from 'discord.js';
 
 import {
+  formatInvoiceDocument,
   getAllInvoicesWithPrimarySplit,
   getAllInvoicesWithSecondarySplit,
   getAllRaidGuildInvoices,
@@ -63,9 +64,11 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  allInvoicesWithSecondarySplitRecipients.forEach(invoice => {
-    console.log(invoice);
-  });
+  const formattedInvoiceDocuments = allInvoicesWithSecondarySplitRecipients.map(
+    formatInvoiceDocument
+  );
+
+  console.log(formattedInvoiceDocuments);
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')

@@ -129,7 +129,7 @@ export const getAllInvoicesWithSecondarySplit = async (
       );
       return {
         ...invoice,
-        finalRecipientsSplit: {
+        secondarySplit: {
           id: secondarySplit.id,
           recipients: secondarySplit.recipients.map(
             (recipient: { account: { id: string } }) => recipient.account.id
