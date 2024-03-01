@@ -12,7 +12,9 @@ import {
   getAllRaidGuildInvoices,
   getIsInvoiceProviderRaidGuild
 } from '@/lib';
+import { dbPromise } from '@/lib/mongodb';
 import { ClientWithCommands } from '@/types';
+import { discordLogger } from '@/utils/logger';
 
 const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
 
@@ -68,14 +70,33 @@ export const syncInvoiceDataInteraction = async (
     formatInvoiceDocument
   );
 
-  console.log(formattedInvoiceDocuments);
+  const updates = formattedInvoiceDocuments.map(invoiceDocument => {
+    return {
+      updateOne: {
+        filter: { address: invoiceDocument.address },
+        update: { $set: invoiceDocument },
+        upsert: true
+      }
+    };
+  });
+
+  let result = null;
+
+  try {
+    const dbClient = await dbPromise;
+    result = await dbClient.collection('invoices').bulkWrite(updates);
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+  }
+
+  if (!result) {
+    return;
+  }
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')
     .setColor('#ff3864')
     .setTimestamp();
 
-  setTimeout(async () => {
-    await interaction.editReply({ embeds: [embed] });
-  }, 3000);
+  await interaction.editReply({ embeds: [embed] });
 };
