@@ -36,6 +36,7 @@ export const HASURA_GRAPHQL_ENDPOINT =
 export const HASURA_GRAPHQL_ADMIN_SECRET =
   process.env.HASURA_GRAPHQL_ADMIN_SECRET ?? '';
 
+export const CHAIN_ID = process.env.CHAIN_ID ?? '';
 export const RAIDGUILD_GAME_ADDRESS = process.env.RAIDGUILD_GAME_ADDRESS ?? '';
 export const CHARACTER_SHEETS_SUBGRAPH_URL =
   process.env.CHARACTER_SHEETS_SUBGRAPH_URL ?? '';

@@ -7,6 +7,7 @@ import {
   InvoiceWithSplits
 } from '@/types';
 import {
+  CHAIN_ID,
   RAIDGUILD_DAO_ADDRESS,
   SMART_INVOICE_SUBGRAPH_URL
 } from '@/utils/constants';
@@ -94,6 +95,8 @@ export const formatInvoiceDocument = (
   invoice: InvoiceWithSplits
 ): Omit<InvoiceDocument, '_id'> => {
   return {
+    chainId: CHAIN_ID,
+    gameId: RAIDGUILD_DAO_ADDRESS,
     address: invoice.id,
     amount: invoice.releases
       .reduce((acc, release) => acc + BigInt(release.amount), BigInt(0))

@@ -30,6 +30,8 @@ export type InvoiceWithSplits = Invoice & {
 
 export type InvoiceDocument = {
   _id: ObjectId;
+  chainId: string;
+  gameId: string;
   address: string;
   amount: string;
   providerReceiver: string;
