@@ -92,6 +92,7 @@ export const getAllInvoicesWithSecondarySplit = async (
       splits(where: { id_in: [${formattedPrimarySplitRecipients}] }) {
         id
         recipients {
+          ownership
           account {
             id
           }
@@ -132,7 +133,11 @@ export const getAllInvoicesWithSecondarySplit = async (
         secondarySplit: {
           id: secondarySplit.id,
           recipients: secondarySplit.recipients.map(
-            (recipient: { account: { id: string } }) => recipient.account.id
+            (recipient: { ownership: string; account: { id: string } }) => ({
+              // Ownership is the percentage of the split multiplied by 10,000. So 50% would be 500000
+              ownership: recipient.ownership,
+              address: recipient.account.id
+            })
           )
         }
       };

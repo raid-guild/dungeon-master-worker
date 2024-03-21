@@ -24,7 +24,10 @@ export type InvoiceWithSplits = Invoice & {
   };
   secondarySplit?: {
     id: string;
-    recipients: string[];
+    recipients: {
+      ownership: string;
+      address: string;
+    }[];
   };
 };
 
@@ -32,11 +35,22 @@ export type InvoiceDocument = {
   _id: ObjectId;
   chainId: string;
   gameId: string;
-  address: string;
+  invoiceAddress: string;
   amount: string;
   providerReceiver: string;
   primarySplitId: string;
   primarySplitRecipients: string[];
   secondarySplitId: string;
-  secondarySplitRecipients: string[];
+  secondarySplitRecipients: {
+    address: string;
+    amount: string;
+  }[];
+};
+
+export type InvoiceXpDistroData = {
+  amountDiff: string;
+  recipients: {
+    address: string;
+    amount: string;
+  }[];
 };
