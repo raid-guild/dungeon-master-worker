@@ -11,7 +11,8 @@ import {
   getAllInvoicesWithSecondarySplit,
   getAllRaidGuildInvoices,
   getInvoiceXpDistroData,
-  getIsInvoiceProviderRaidGuild
+  getIsInvoiceProviderRaidGuild,
+  getRaidDataFromInvoiceAddresses
 } from '@/lib';
 import { dbPromise } from '@/lib/mongodb';
 import { ClientWithCommands, InvoiceDocument } from '@/types';
@@ -94,29 +95,46 @@ export const syncInvoiceDataInteraction = async (
     previousInvoiceDocuments as InvoiceDocument[]
   );
 
-  console.log(invoiceXpDistroData[0]);
+  const invoiceAddressesForRaidData = invoiceXpDistroData.map(
+    distroData => distroData.invoiceAddress
+  );
 
-  const updates = formattedInvoiceDocuments.map(invoiceDocument => {
-    return {
-      updateOne: {
-        filter: { invoiceAddress: invoiceDocument.invoiceAddress },
-        update: { $set: invoiceDocument },
-        upsert: true
-      }
-    };
-  });
-
-  let result = null;
-
-  try {
-    result = await dbClient.collection('invoices').bulkWrite(updates);
-  } catch (err) {
-    discordLogger(JSON.stringify(err), client);
-  }
-
-  if (!result) {
+  if (invoiceAddressesForRaidData.length === 0) {
     return;
   }
+
+  const invoiceAddressToRaidDataMap = await getRaidDataFromInvoiceAddresses(
+    client,
+    invoiceAddressesForRaidData
+  );
+
+  if (!invoiceAddressToRaidDataMap) {
+    return;
+  }
+
+  console.log(invoiceAddressToRaidDataMap);
+
+  // const updates = formattedInvoiceDocuments.map(invoiceDocument => {
+  //   return {
+  //     updateOne: {
+  //       filter: { invoiceAddress: invoiceDocument.invoiceAddress },
+  //       update: { $set: invoiceDocument },
+  //       upsert: true
+  //     }
+  //   };
+  // });
+
+  // let result = null;
+
+  // try {
+  //   result = await dbClient.collection('invoices').bulkWrite(updates);
+  // } catch (err) {
+  //   discordLogger(JSON.stringify(err), client);
+  // }
+
+  // if (!result) {
+  //   return;
+  // }
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')

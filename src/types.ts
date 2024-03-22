@@ -48,6 +48,7 @@ export type InvoiceDocument = {
 };
 
 export type InvoiceXpDistroData = {
+  invoiceAddress: string;
   amountDiff: string;
   recipients: {
     address: string;

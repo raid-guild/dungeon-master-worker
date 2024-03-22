@@ -147,6 +147,7 @@ export const getInvoiceXpDistroData = (
 
       if (!previousInvoice) {
         return {
+          invoiceAddress: currentInvoice.invoiceAddress,
           amountDiff: currentInvoice.amount,
           recipients: currentInvoice.secondarySplitRecipients
         };
@@ -159,6 +160,7 @@ export const getInvoiceXpDistroData = (
       ).toString();
 
       return {
+        invoiceAddress: currentInvoice.invoiceAddress,
         amountDiff,
         recipients: currentInvoice.secondarySplitRecipients
       };

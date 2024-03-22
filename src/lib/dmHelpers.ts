@@ -11,7 +11,7 @@ import {
   HASURA_GRAPHQL_ADMIN_SECRET,
   HASURA_GRAPHQL_ENDPOINT
 } from '@/utils/constants';
-import { logError } from '@/utils/logger';
+import { discordLogger, logError } from '@/utils/logger';
 
 if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
   throw new Error(
@@ -87,5 +87,89 @@ export const getPlayerAddressesByDiscordHandles = async (
       `There was an error querying ETH addresses in DungeonMaster using Discord handles!`
     );
     return [null, null];
+  }
+};
+
+export const getRaidDataFromInvoiceAddresses = async (
+  client: ClientWithCommands,
+  invoiceAddresses: string[]
+) => {
+  try {
+    if (!HASURA_GRAPHQL_ADMIN_SECRET || !HASURA_GRAPHQL_ENDPOINT) {
+      throw new Error(
+        'Missing envs HASURA_GRAPHQL_ADMIN_SECRET or HASURA_GRAPHQL_ENDPOINT'
+      );
+    }
+
+    const query = `
+      query RaidsQuery {
+        raids(where: { invoice_address: { _in: ${JSON.stringify(
+          invoiceAddresses
+        )}}}) {
+          invoice_address
+          raid_parties {
+            member {
+              eth_address
+            }
+            raider_class_key
+          }
+        }
+      }
+    `;
+
+    const headers = {
+      'x-hasura-admin-secret': HASURA_GRAPHQL_ADMIN_SECRET
+    };
+
+    const response = await axios({
+      url: HASURA_GRAPHQL_ENDPOINT,
+      method: 'post',
+      headers,
+      data: {
+        query
+      }
+    });
+
+    if (response.data.errors) {
+      throw new Error(JSON.stringify(response.data.errors));
+    }
+
+    const { raids } = response.data.data;
+
+    const invoiceAddressToRaidDataMap: Record<
+      string,
+      Record<string, string>
+    > = {};
+
+    raids.forEach(
+      (raid: {
+        invoice_address: string;
+        raid_parties: {
+          member: { eth_address: string };
+          raider_class_key: string;
+        }[];
+      }) => {
+        const raidData = raid.raid_parties.reduce(
+          (
+            acc: Record<string, string>,
+            raidParty: {
+              member: { eth_address: string };
+              raider_class_key: string;
+            }
+          ) => {
+            const { eth_address: ethAddress } = raidParty.member;
+            const { raider_class_key: raiderClassKey } = raidParty;
+            acc[ethAddress] = raiderClassKey;
+            return acc;
+          },
+          {}
+        );
+        invoiceAddressToRaidDataMap[raid.invoice_address] = raidData;
+      }
+    );
+    return invoiceAddressToRaidDataMap;
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+    return null;
   }
 };
