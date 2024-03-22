@@ -107,6 +107,12 @@ export const getRaidDataFromInvoiceAddresses = async (
           invoiceAddresses
         )}}}) {
           invoice_address
+          cleric {
+            eth_address
+          }
+          hunter {
+            eth_address
+          }
           raid_parties {
             member {
               eth_address
@@ -144,6 +150,8 @@ export const getRaidDataFromInvoiceAddresses = async (
     raids.forEach(
       (raid: {
         invoice_address: string;
+        cleric: { eth_address: string };
+        hunter: { eth_address: string };
         raid_parties: {
           member: { eth_address: string };
           raider_class_key: string;
@@ -164,7 +172,18 @@ export const getRaidDataFromInvoiceAddresses = async (
           },
           {}
         );
-        invoiceAddressToRaidDataMap[raid.invoice_address] = raidData;
+
+        if (raid.cleric) {
+          raidData[raid.cleric.eth_address] = 'ACCOUNT_MANAGER';
+        }
+
+        if (raid.hunter) {
+          raidData[raid.hunter.eth_address] = 'BIZ_DEV';
+        }
+
+        if (Object.keys(raidData).length > 0) {
+          invoiceAddressToRaidDataMap[raid.invoice_address] = raidData;
+        }
       }
     );
     return invoiceAddressToRaidDataMap;
