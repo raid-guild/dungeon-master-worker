@@ -12,7 +12,8 @@ import {
   CHAIN_ID,
   RAIDGUILD_DAO_ADDRESS,
   RAIDGUILD_GAME_ADDRESS,
-  SMART_INVOICE_SUBGRAPH_URL
+  SMART_INVOICE_SUBGRAPH_URL,
+  WXDAI_CONTRACT_ADDRESS
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
@@ -77,7 +78,7 @@ export const getAllRaidGuildInvoices = async (
 
     const query = `
     query InvoiceQuery {
-      invoices(where: { provider: "${RAIDGUILD_DAO_ADDRESS}" }) {
+      invoices(where: { provider: "${RAIDGUILD_DAO_ADDRESS}", token: "${WXDAI_CONTRACT_ADDRESS}" }) {
         id
         providerReceiver
         releases {
