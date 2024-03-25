@@ -19,7 +19,7 @@ if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
   );
 }
 
-export const getPlayerAddressesByDiscordHandles = async (
+export const getPlayerAddressesByDiscordTags = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
@@ -113,13 +113,22 @@ export const getRaidDataFromInvoiceAddresses = async (
           invoice_address
           cleric {
             eth_address
+            contact_info {
+              discord
+            }
           }
           hunter {
             eth_address
+            contact_info {
+              discord
+            }
           }
           raid_parties {
             member {
               eth_address
+              contact_info {
+                discord
+              }
             }
             raider_class_key
           }
@@ -147,10 +156,10 @@ export const getRaidDataFromInvoiceAddresses = async (
     const { raids } = response.data.data as {
       raids: {
         invoice_address: string;
-        cleric: { eth_address: string };
-        hunter: { eth_address: string };
+        cleric: { eth_address: string; contact_info: { discord: string } };
+        hunter: { eth_address: string; contact_info: { discord: string } };
         raid_parties: {
-          member: { eth_address: string };
+          member: { eth_address: string; contact_info: { discord: string } };
           raider_class_key: string;
         }[];
       }[];
@@ -160,6 +169,7 @@ export const getRaidDataFromInvoiceAddresses = async (
       invoiceAddress: string;
       playerAddress: string;
       classKey: string | null;
+      discordTag: string | null;
       accountAddress: string | null;
     };
 
@@ -185,6 +195,7 @@ export const getRaidDataFromInvoiceAddresses = async (
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
                 classKey: 'ACCOUNT_MANAGER',
+                discordTag: raidData.cleric.contact_info.discord,
                 accountAddress: null
               };
             }
@@ -194,6 +205,7 @@ export const getRaidDataFromInvoiceAddresses = async (
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
                 classKey: 'BIZ_DEV',
+                discordTag: raidData.hunter.contact_info.discord,
                 accountAddress: null
               };
             }
@@ -203,6 +215,7 @@ export const getRaidDataFromInvoiceAddresses = async (
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
                 classKey: null,
+                discordTag: null,
                 accountAddress: null
               };
             }
@@ -211,6 +224,7 @@ export const getRaidDataFromInvoiceAddresses = async (
               invoiceAddress: distroData.invoiceAddress,
               playerAddress,
               classKey: raidPartyMember.raider_class_key,
+              discordTag: raidPartyMember.member.contact_info.discord,
               accountAddress: null
             };
           }

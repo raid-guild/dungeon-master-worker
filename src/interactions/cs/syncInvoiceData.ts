@@ -10,6 +10,7 @@ import {
   getAllInvoicesWithPrimarySplit,
   getAllInvoicesWithSecondarySplit,
   getAllRaidGuildInvoices,
+  getCharacterAccountsByPlayerAddresses,
   getInvoiceXpDistroData,
   getIsInvoiceProviderRaidGuild,
   getRaidDataFromInvoiceAddresses
@@ -108,7 +109,34 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  console.log(allPayoutInfo);
+  const discordTagToEthAddressMap: Record<string, string> =
+    allPayoutInfo.reduce((acc, payoutInfo) => {
+      acc[payoutInfo.discordTag as string] = payoutInfo.playerAddress;
+      return acc;
+    }, {} as Record<string, string>);
+
+  const [
+    discordTagToCharacterAccountMap
+    // TODO: discordTagsWithoutCharacterAccounts will be used to drop a character on a player
+    // discordTagsWithoutCharacterAccounts
+  ] = await getCharacterAccountsByPlayerAddresses(
+    client,
+    discordTagToEthAddressMap
+  );
+
+  if (!discordTagToCharacterAccountMap) {
+    return;
+  }
+
+  const allPayoutInfoWithAccountAddresses = allPayoutInfo.map(payoutInfo => {
+    return {
+      ...payoutInfo,
+      accountAddress:
+        discordTagToCharacterAccountMap[payoutInfo.discordTag ?? '']
+    };
+  });
+
+  console.log(allPayoutInfoWithAccountAddresses);
 
   // const updates = formattedInvoiceDocuments.map(invoiceDocument => {
   //   return {

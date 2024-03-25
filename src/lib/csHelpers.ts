@@ -28,11 +28,11 @@ if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
 
 export const getCharacterAccountsByPlayerAddresses = async (
   client: ClientWithCommands,
-  interaction:
+  discordTagToEthAddressMap: Record<string, string>,
+  interaction?:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
-    | UserContextMenuCommandInteraction,
-  discordTagToEthAddressMap: Record<string, string>
+    | UserContextMenuCommandInteraction
 ): Promise<[Record<string, string> | null, string[] | null]> => {
   try {
     const playerAddresses = Object.values(discordTagToEthAddressMap);
@@ -89,12 +89,16 @@ export const getCharacterAccountsByPlayerAddresses = async (
       discordTagsWithoutCharacterAccounts
     ];
   } catch (err) {
-    logError(
-      client,
-      interaction,
-      err,
-      'There was an error finding a character account address associated with that Discord handle in CharacterSheets!'
-    );
+    if (interaction) {
+      logError(
+        client,
+        interaction,
+        err,
+        'There was an error finding a character account address associated with that Discord handle in CharacterSheets!'
+      );
+    } else {
+      discordLogger(JSON.stringify(err), client);
+    }
     return [null, null];
   }
 };
