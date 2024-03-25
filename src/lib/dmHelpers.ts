@@ -6,7 +6,7 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
-import { ClientWithCommands } from '@/types';
+import { ClientWithCommands, InvoiceXpDistroData } from '@/types';
 import {
   HASURA_GRAPHQL_ADMIN_SECRET,
   HASURA_GRAPHQL_ENDPOINT
@@ -92,7 +92,7 @@ export const getPlayerAddressesByDiscordHandles = async (
 
 export const getRaidDataFromInvoiceAddresses = async (
   client: ClientWithCommands,
-  invoiceAddresses: string[]
+  invoiceXpDistroData: InvoiceXpDistroData[]
 ) => {
   try {
     if (!HASURA_GRAPHQL_ADMIN_SECRET || !HASURA_GRAPHQL_ENDPOINT) {
@@ -100,6 +100,10 @@ export const getRaidDataFromInvoiceAddresses = async (
         'Missing envs HASURA_GRAPHQL_ADMIN_SECRET or HASURA_GRAPHQL_ENDPOINT'
       );
     }
+
+    const invoiceAddresses = invoiceXpDistroData.map(
+      distroData => distroData.invoiceAddress
+    );
 
     const query = `
       query RaidsQuery {
@@ -140,15 +144,8 @@ export const getRaidDataFromInvoiceAddresses = async (
       throw new Error(JSON.stringify(response.data.errors));
     }
 
-    const { raids } = response.data.data;
-
-    const invoiceAddressToRaidDataMap: Record<
-      string,
-      Record<string, string>
-    > = {};
-
-    raids.forEach(
-      (raid: {
+    const { raids } = response.data.data as {
+      raids: {
         invoice_address: string;
         cleric: { eth_address: string };
         hunter: { eth_address: string };
@@ -156,37 +153,75 @@ export const getRaidDataFromInvoiceAddresses = async (
           member: { eth_address: string };
           raider_class_key: string;
         }[];
-      }) => {
-        const raidData = raid.raid_parties.reduce(
-          (
-            acc: Record<string, string>,
-            raidParty: {
-              member: { eth_address: string };
-              raider_class_key: string;
-            }
-          ) => {
-            const { eth_address: ethAddress } = raidParty.member;
-            const { raider_class_key: raiderClassKey } = raidParty;
-            acc[ethAddress] = raiderClassKey;
-            return acc;
-          },
-          {}
+      }[];
+    };
+
+    type PayoutInfo = {
+      invoiceAddress: string;
+      playerAddress: string;
+      classKey: string | null;
+      accountAddress: string | null;
+    };
+
+    const allPayoutInfo = invoiceXpDistroData
+      .map(distroData => {
+        const raidData = raids.find(
+          raid => raid.invoice_address === distroData.invoiceAddress
         );
 
-        if (raid.cleric) {
-          raidData[raid.cleric.eth_address] = 'ACCOUNT_MANAGER';
+        if (!raidData) {
+          return null;
         }
 
-        if (raid.hunter) {
-          raidData[raid.hunter.eth_address] = 'BIZ_DEV';
-        }
+        const payoutInfo: PayoutInfo[] = distroData.recipients.map(
+          recipient => {
+            const { address: playerAddress } = recipient;
+            const raidPartyMember = raidData.raid_parties.find(
+              party => party.member.eth_address === playerAddress
+            );
 
-        if (Object.keys(raidData).length > 0) {
-          invoiceAddressToRaidDataMap[raid.invoice_address] = raidData;
-        }
-      }
-    );
-    return invoiceAddressToRaidDataMap;
+            if (playerAddress === raidData.cleric?.eth_address) {
+              return {
+                invoiceAddress: distroData.invoiceAddress,
+                playerAddress,
+                classKey: 'ACCOUNT_MANAGER',
+                accountAddress: null
+              };
+            }
+
+            if (playerAddress === raidData.hunter?.eth_address) {
+              return {
+                invoiceAddress: distroData.invoiceAddress,
+                playerAddress,
+                classKey: 'BIZ_DEV',
+                accountAddress: null
+              };
+            }
+
+            if (!raidPartyMember) {
+              return {
+                invoiceAddress: distroData.invoiceAddress,
+                playerAddress,
+                classKey: null,
+                accountAddress: null
+              };
+            }
+
+            return {
+              invoiceAddress: distroData.invoiceAddress,
+              playerAddress,
+              classKey: raidPartyMember.raider_class_key,
+              accountAddress: null
+            };
+          }
+        );
+
+        return payoutInfo;
+      })
+      .filter(payoutInfo => payoutInfo !== null)
+      .flat() as PayoutInfo[];
+
+    return allPayoutInfo;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;

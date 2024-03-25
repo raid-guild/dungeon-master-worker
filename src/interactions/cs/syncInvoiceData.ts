@@ -95,24 +95,20 @@ export const syncInvoiceDataInteraction = async (
     previousInvoiceDocuments as InvoiceDocument[]
   );
 
-  const invoiceAddressesForRaidData = invoiceXpDistroData.map(
-    distroData => distroData.invoiceAddress
-  );
-
-  if (invoiceAddressesForRaidData.length === 0) {
+  if (invoiceXpDistroData.length === 0) {
     return;
   }
 
-  const invoiceAddressToRaidDataMap = await getRaidDataFromInvoiceAddresses(
+  const allPayoutInfo = await getRaidDataFromInvoiceAddresses(
     client,
-    invoiceAddressesForRaidData
+    invoiceXpDistroData
   );
 
-  if (!invoiceAddressToRaidDataMap) {
+  if (!allPayoutInfo) {
     return;
   }
 
-  console.log(invoiceAddressToRaidDataMap);
+  console.log(allPayoutInfo);
 
   // const updates = formattedInvoiceDocuments.map(invoiceDocument => {
   //   return {
