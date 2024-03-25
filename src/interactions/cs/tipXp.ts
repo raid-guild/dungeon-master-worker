@@ -122,7 +122,6 @@ export const tipXpInteraction = async (
     );
   if (!discordTagToCharacterAccountMap) return;
   const accountAddresses = Object.values(discordTagToCharacterAccountMap);
-  if (!accountAddresses) return;
 
   if (accountAddresses.length === 0) {
     const embed = new EmbedBuilder()

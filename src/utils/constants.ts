@@ -46,6 +46,7 @@ export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
 export const RPC_URL = process.env.RPC_URL ?? '';
 export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
 export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
+export const CLASS_ADDRESS = process.env.CLASS_ADDRESS ?? '';
 
 export const SMART_INVOICE_SUBGRAPH_URL =
   process.env.SMART_INVOICE_SUBGRAPH_URL ?? '';

@@ -55,3 +55,12 @@ export type InvoiceXpDistroData = {
     amount: string;
   }[];
 };
+
+export type PayoutInfo = {
+  invoiceAddress: string;
+  playerAddress: string;
+  amount: string;
+  classKey: string | null;
+  discordTag: string | null;
+  accountAddress: string | null;
+};

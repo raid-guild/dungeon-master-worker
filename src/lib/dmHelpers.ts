@@ -6,7 +6,7 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
-import { ClientWithCommands, InvoiceXpDistroData } from '@/types';
+import { ClientWithCommands, InvoiceXpDistroData, PayoutInfo } from '@/types';
 import {
   HASURA_GRAPHQL_ADMIN_SECRET,
   HASURA_GRAPHQL_ENDPOINT
@@ -165,14 +165,6 @@ export const getRaidDataFromInvoiceAddresses = async (
       }[];
     };
 
-    type PayoutInfo = {
-      invoiceAddress: string;
-      playerAddress: string;
-      classKey: string | null;
-      discordTag: string | null;
-      accountAddress: string | null;
-    };
-
     const allPayoutInfo = invoiceXpDistroData
       .map(distroData => {
         const raidData = raids.find(
@@ -194,6 +186,7 @@ export const getRaidDataFromInvoiceAddresses = async (
               return {
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
+                amount: recipient.amount,
                 classKey: 'ACCOUNT_MANAGER',
                 discordTag: raidData.cleric.contact_info.discord,
                 accountAddress: null
@@ -204,6 +197,7 @@ export const getRaidDataFromInvoiceAddresses = async (
               return {
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
+                amount: recipient.amount,
                 classKey: 'BIZ_DEV',
                 discordTag: raidData.hunter.contact_info.discord,
                 accountAddress: null
@@ -214,6 +208,7 @@ export const getRaidDataFromInvoiceAddresses = async (
               return {
                 invoiceAddress: distroData.invoiceAddress,
                 playerAddress,
+                amount: recipient.amount,
                 classKey: null,
                 discordTag: null,
                 accountAddress: null
@@ -223,6 +218,7 @@ export const getRaidDataFromInvoiceAddresses = async (
             return {
               invoiceAddress: distroData.invoiceAddress,
               playerAddress,
+              amount: recipient.amount,
               classKey: raidPartyMember.raider_class_key,
               discordTag: raidPartyMember.member.contact_info.discord,
               accountAddress: null

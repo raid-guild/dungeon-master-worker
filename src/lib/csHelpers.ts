@@ -7,11 +7,12 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 import { ethers } from 'ethers';
-import { Address, encodeFunctionData, parseAbi } from 'viem';
+import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
-import { ClientWithCommands } from '@/types';
+import { ClientWithCommands, PayoutInfo } from '@/types';
 import {
   CHARACTER_SHEETS_SUBGRAPH_URL,
+  CLASS_ADDRESS,
   NPC_SAFE_ADDRESS,
   NPC_SAFE_OWNER_KEY,
   RAIDGUILD_GAME_ADDRESS,
@@ -103,7 +104,15 @@ export const getCharacterAccountsByPlayerAddresses = async (
   }
 };
 
-if (!NPC_SAFE_ADDRESS || !NPC_SAFE_OWNER_KEY || !RPC_URL || !XP_ADDRESS) {
+if (
+  !(
+    NPC_SAFE_ADDRESS &&
+    NPC_SAFE_OWNER_KEY &&
+    RPC_URL &&
+    XP_ADDRESS &&
+    CLASS_ADDRESS
+  )
+) {
   throw new Error(
     'Missing envs NPC_SAFE_ADDRESS or NPC_SAFE_OWNER_KEY or RPC_URL or XP_ADDRESS'
   );
@@ -172,6 +181,74 @@ export const dropExp = async (
 
     return tx;
   } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+    return null;
+  }
+};
+
+const CLASS_KEY_TO_ID_MAP: Record<string, string> = {
+  FRONTEND_DEV: '1',
+  SMART_CONTRACTS: '2',
+  COMMUNITY: '3',
+  RECORD_KEEPER: '4',
+  LEGAL: '5',
+  BACKEND_DEV: '6',
+  PROJECT_MANAGEMENT: '7',
+  BIZ_DEV: '8',
+  OPERATIONS: '9',
+  TREASURY: '10',
+  ACCOUNT_MANAGER: '11',
+  DESIGN: '12'
+};
+
+const buildGiveClassXpTransactionData = (payoutInfo: PayoutInfo) => {
+  const abi = parseAbi([
+    'function giveClassExp(address characterAccount, uint256 classId, uint256 amountOfExp) public'
+  ]);
+
+  const accountAddress = payoutInfo.accountAddress as Address;
+  const classId = CLASS_KEY_TO_ID_MAP[payoutInfo.classKey as string];
+  const amount = formatEther(BigInt(payoutInfo.amount));
+  const amountAsInteger = Math.ceil(Number(amount));
+
+  const data = encodeFunctionData({
+    abi,
+    functionName: 'giveClassExp',
+    args: [accountAddress, BigInt(classId), BigInt(amountAsInteger)]
+  });
+
+  const giveClassExpTransactionData: SafeTransactionDataPartial = {
+    to: CLASS_ADDRESS,
+    data,
+    value: '0'
+  };
+
+  return giveClassExpTransactionData;
+};
+
+export const giveClassXp = async (
+  client: ClientWithCommands,
+  allPayoutInfo: PayoutInfo[]
+) => {
+  const safe = await getNpcGnosisSafe();
+
+  const safeTransactionData = allPayoutInfo.map(payoutInfo => {
+    return buildGiveClassXpTransactionData(payoutInfo);
+  });
+
+  try {
+    const safeTx = await safe.createTransaction({
+      safeTransactionData
+    });
+
+    const txRes = await safe.executeTransaction(safeTx);
+    const tx = txRes.transactionResponse;
+
+    if (!tx) throw new Error('Could not submit transaction');
+
+    return tx;
+  } catch (err) {
+    console.log(err);
     discordLogger(JSON.stringify(err), client);
     return null;
   }
