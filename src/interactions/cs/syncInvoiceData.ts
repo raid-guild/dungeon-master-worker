@@ -138,12 +138,11 @@ export const syncInvoiceDataInteraction = async (
     };
   });
 
-  const tx = await giveClassXp(
-    client,
-    allPayoutInfoWithAccountAddresses.filter(
-      payoutInfo => payoutInfo.accountAddress !== null
-    )
+  const finalPayoutInfo = allPayoutInfoWithAccountAddresses.filter(
+    payoutInfo => payoutInfo.accountAddress !== null
   );
+
+  const tx = await giveClassXp(client, finalPayoutInfo);
 
   if (!tx) return;
 
@@ -180,27 +179,49 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  // const updates = formattedInvoiceDocuments.map(invoiceDocument => {
-  //   return {
-  //     updateOne: {
-  //       filter: { invoiceAddress: invoiceDocument.invoiceAddress },
-  //       update: { $set: invoiceDocument },
-  //       upsert: true
-  //     }
-  //   };
-  // });
+  const updatedInvoiceDocuments = formattedInvoiceDocuments.map(
+    invoiceDocument => {
+      return {
+        ...invoiceDocument,
+        secondarySplitRecipients: invoiceDocument.secondarySplitRecipients.map(
+          recipient => {
+            return {
+              ...recipient,
+              xpReceived: finalPayoutInfo.some(
+                payoutInfo =>
+                  payoutInfo.invoiceAddress ===
+                    invoiceDocument.invoiceAddress &&
+                  payoutInfo.playerAddress === recipient.address &&
+                  payoutInfo.classKey !== null
+              )
+            };
+          }
+        )
+      };
+    }
+  );
 
-  // let result = null;
+  const updates = updatedInvoiceDocuments.map(invoiceDocument => {
+    return {
+      updateOne: {
+        filter: { invoiceAddress: invoiceDocument.invoiceAddress },
+        update: { $set: invoiceDocument },
+        upsert: true
+      }
+    };
+  });
 
-  // try {
-  //   result = await dbClient.collection('invoices').bulkWrite(updates);
-  // } catch (err) {
-  //   discordLogger(JSON.stringify(err), client);
-  // }
+  let result = null;
 
-  // if (!result) {
-  //   return;
-  // }
+  try {
+    result = await dbClient.collection('invoices').bulkWrite(updates);
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+  }
+
+  if (!result) {
+    return;
+  }
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')

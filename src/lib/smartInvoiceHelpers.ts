@@ -128,7 +128,8 @@ export const formatInvoiceDocument = (
             (bigIntAmount * BigInt(r.ownership)) /
             BigInt(1000000)
           ).toString(),
-          address: r.address
+          address: r.address,
+          xpReceived: false
         };
       }) ?? []
   };

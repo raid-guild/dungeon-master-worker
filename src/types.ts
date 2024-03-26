@@ -44,6 +44,7 @@ export type InvoiceDocument = {
   secondarySplitRecipients: {
     address: string;
     amount: string;
+    xpReceived: boolean;
   }[];
 };
 
