@@ -9,6 +9,7 @@ import {
 import { ethers } from 'ethers';
 import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
+import { uploadToPinata } from '@/lib/pinata';
 import { ClientWithCommands, PayoutInfo } from '@/types';
 import {
   CHARACTER_SHEETS_SUBGRAPH_URL,
@@ -249,6 +250,83 @@ export const giveClassXp = async (
     return tx;
   } catch (err) {
     console.log(err);
+    discordLogger(JSON.stringify(err), client);
+    return null;
+  }
+};
+
+const buildRollCharacterTransactionData = async (payoutInfo: PayoutInfo) => {
+  try {
+    const characterMetadata: {
+      name: string;
+      description: string;
+      image: string;
+    } = {
+      name: payoutInfo.discordTag as string,
+      description: '(no bio)',
+      image: `ipfs://QmWxR5ghwhE9dF62Q1QwgQZqJSncmfE6XrDLetXwiFq6Wz`
+    };
+
+    const fileContents = Buffer.from(JSON.stringify(characterMetadata));
+
+    const cid = await uploadToPinata(fileContents, 'characterMetadata.json');
+    if (!cid) {
+      throw new Error('Could not upload to IPFS');
+    }
+
+    const abi = parseAbi([
+      'function rollCharacterSheet(address player,string calldata _tokenURI) external returns (uint256)'
+    ]);
+
+    const playerAddress = payoutInfo.playerAddress as Address;
+
+    const data = encodeFunctionData({
+      abi,
+      functionName: 'rollCharacterSheet',
+      args: [playerAddress, cid]
+    });
+
+    const rollCharacterSheetTransactionData: SafeTransactionDataPartial = {
+      to: RAIDGUILD_GAME_ADDRESS,
+      data,
+      value: '0'
+    };
+
+    return rollCharacterSheetTransactionData;
+  } catch (err) {
+    return null;
+  }
+};
+
+export const rollCharacterSheets = async (
+  client: ClientWithCommands,
+  allPayoutInfo: PayoutInfo[]
+) => {
+  const safe = await getNpcGnosisSafe();
+
+  try {
+    const safeTransactionData = await Promise.all(
+      allPayoutInfo.map(async payoutInfo => {
+        const txData = await buildRollCharacterTransactionData(payoutInfo);
+        return txData;
+      })
+    );
+
+    if (safeTransactionData.includes(null)) {
+      throw new Error('Could not build transaction data');
+    }
+
+    const safeTx = await safe.createTransaction({
+      safeTransactionData: safeTransactionData as SafeTransactionDataPartial[]
+    });
+
+    const txRes = await safe.executeTransaction(safeTx);
+    const tx = txRes.transactionResponse;
+
+    if (!tx) throw new Error('Could not submit transaction');
+
+    return tx;
+  } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;
   }

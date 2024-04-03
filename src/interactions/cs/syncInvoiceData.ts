@@ -14,7 +14,8 @@ import {
   getInvoiceXpDistroData,
   getIsInvoiceProviderRaidGuild,
   getRaidDataFromInvoiceAddresses,
-  giveClassXp
+  giveClassXp,
+  rollCharacterSheets
 } from '@/lib';
 import { dbPromise } from '@/lib/mongodb';
 import { ClientWithCommands, InvoiceDocument } from '@/types';
@@ -117,16 +118,71 @@ export const syncInvoiceDataInteraction = async (
       return acc;
     }, {} as Record<string, string>);
 
-  const [
-    discordTagToCharacterAccountMap
-    // TODO: discordTagsWithoutCharacterAccounts will be used to drop a character on a player
-    // discordTagsWithoutCharacterAccounts
-  ] = await getCharacterAccountsByPlayerAddresses(
-    client,
-    discordTagToEthAddressMap
+  const [discordTagToCharacterAccountMap1] =
+    await getCharacterAccountsByPlayerAddresses(
+      client,
+      discordTagToEthAddressMap
+    );
+
+  if (!discordTagToCharacterAccountMap1) {
+    return;
+  }
+
+  const allPayoutInfoWithoutAccountAddresses = allPayoutInfo.filter(
+    payoutInfo => !discordTagToCharacterAccountMap1[payoutInfo.discordTag ?? '']
   );
 
-  if (!discordTagToCharacterAccountMap) {
+  let tx = null;
+
+  if (allPayoutInfoWithoutAccountAddresses.length > 0) {
+    tx = await rollCharacterSheets(
+      client,
+      allPayoutInfoWithoutAccountAddresses
+    );
+
+    if (!tx) return;
+
+    const txHash = tx.hash;
+
+    embed = new EmbedBuilder()
+      .setTitle('Character Creation Transaction Pending...')
+      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setDescription(
+        `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.editReply({
+      embeds: [embed]
+    });
+
+    const txReceipt = await tx.wait();
+
+    if (!txReceipt.status) {
+      embed = new EmbedBuilder()
+        .setTitle('Class XP Transaction Failed!')
+        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+        .setDescription(
+          `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        )
+        .setColor('#ff3864')
+        .setTimestamp();
+
+      await interaction.editReply({
+        embeds: [embed]
+      });
+      return;
+    }
+  }
+
+  const [discordTagToCharacterAccountMap2] =
+    await getCharacterAccountsByPlayerAddresses(
+      client,
+      discordTagToEthAddressMap
+    );
+
+  if (!discordTagToCharacterAccountMap2) {
     return;
   }
 
@@ -134,15 +190,19 @@ export const syncInvoiceDataInteraction = async (
     return {
       ...payoutInfo,
       accountAddress:
-        discordTagToCharacterAccountMap[payoutInfo.discordTag ?? ''] ?? null
+        discordTagToCharacterAccountMap2[payoutInfo.discordTag ?? ''] ?? null
     };
   });
+
+  if (allPayoutInfoWithAccountAddresses.length === 0) {
+    return;
+  }
 
   const finalPayoutInfo = allPayoutInfoWithAccountAddresses.filter(
     payoutInfo => payoutInfo.accountAddress !== null
   );
 
-  const tx = await giveClassXp(client, finalPayoutInfo);
+  tx = await giveClassXp(client, finalPayoutInfo);
 
   if (!tx) return;
 
