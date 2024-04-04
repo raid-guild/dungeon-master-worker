@@ -7,7 +7,7 @@ import { discordLogger } from '@/utils/logger';
 export const getAllInvoicesWithPrimarySplit = async (
   client: ClientWithCommands,
   allRaidGuildInvoices: Invoice[]
-): Promise<InvoiceWithSplits[]> => {
+): Promise<InvoiceWithSplits[] | null> => {
   try {
     if (!SPLIT_SUBGRAPH_URL) {
       throw new Error('Missing env SPLIT_SUBGRAPH_URL');
@@ -22,17 +22,17 @@ export const getAllInvoicesWithPrimarySplit = async (
       .join(', ');
 
     const query = `
-    query SplitQuery {
-      splits(where: { id_in: [${formattedProviderReceiverAddresses}] }) {
-        id
-        recipients {
-          account {
-            id
+      query SplitQuery {
+        splits(where: { id_in: [${formattedProviderReceiverAddresses}] }) {
+          id
+          recipients {
+            account {
+              id
+            }
           }
         }
       }
-    }
-  `;
+    `;
 
     const response = await axios.post(SPLIT_SUBGRAPH_URL, {
       query
@@ -65,7 +65,7 @@ export const getAllInvoicesWithPrimarySplit = async (
     });
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
-    return [];
+    return null;
   }
 };
 
@@ -88,18 +88,18 @@ export const getAllInvoicesWithSecondarySplit = async (
       .join(', ');
 
     const query = `
-    query SplitQuery {
-      splits(where: { id_in: [${formattedPrimarySplitRecipients}] }) {
-        id
-        recipients {
-          ownership
-          account {
-            id
+      query SplitQuery {
+        splits(where: { id_in: [${formattedPrimarySplitRecipients}] }) {
+          id
+          recipients {
+            ownership
+            account {
+              id
+            }
           }
         }
       }
-    }
-  `;
+    `;
 
     const response = await axios.post(SPLIT_SUBGRAPH_URL, {
       query
@@ -144,6 +144,6 @@ export const getAllInvoicesWithSecondarySplit = async (
     });
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
-    return [];
+    return null;
   }
 };

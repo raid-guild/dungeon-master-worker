@@ -58,7 +58,7 @@ export const getIsInvoiceProviderRaidGuild = async (
 
 export const getAllRaidGuildInvoices = async (
   client: ClientWithCommands
-): Promise<Invoice[]> => {
+): Promise<Invoice[] | null> => {
   try {
     if (!SMART_INVOICE_SUBGRAPH_URL) {
       throw new Error('Missing env SMART_INVOICE_SUBGRAPH_URL');
@@ -99,7 +99,7 @@ export const getAllRaidGuildInvoices = async (
     return response.data.data.invoices;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
-    return [];
+    return null;
   }
 };
 

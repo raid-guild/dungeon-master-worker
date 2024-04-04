@@ -12,7 +12,7 @@ import {
   getAllRaidGuildInvoices,
   getCharacterAccountsByPlayerAddresses,
   getInvoiceXpDistroData,
-  getIsInvoiceProviderRaidGuild,
+  // getIsInvoiceProviderRaidGuild,
   getRaidDataFromInvoiceAddresses,
   giveClassXp,
   rollCharacterSheets
@@ -22,7 +22,41 @@ import { ClientWithCommands, InvoiceDocument } from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
+// const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
+
+const sendErrorEmbed = async (
+  interaction:
+    | ChatInputCommandInteraction
+    | MessageContextMenuCommandInteraction
+    | UserContextMenuCommandInteraction
+) => {
+  const embed = new EmbedBuilder()
+    .setTitle('Error')
+    .setDescription('An error occurred while syncing.')
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.followUp({
+    embeds: [embed]
+  });
+};
+
+const sendNoSyncableInvoicesEmbed = async (
+  interaction:
+    | ChatInputCommandInteraction
+    | MessageContextMenuCommandInteraction
+    | UserContextMenuCommandInteraction
+) => {
+  const embed = new EmbedBuilder()
+    .setTitle('Sync Complete!')
+    .setDescription('No invoices found.')
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.editReply({
+    embeds: [embed]
+  });
+};
 
 export const syncInvoiceDataInteraction = async (
   client: ClientWithCommands,
@@ -40,25 +74,37 @@ export const syncInvoiceDataInteraction = async (
     embeds: [embed]
   });
 
-  const isInvoiceProviderRaidGuild = await getIsInvoiceProviderRaidGuild(
-    client,
-    TEMP_INVOICE_ADDRESS
-  );
+  // const isInvoiceProviderRaidGuild = await getIsInvoiceProviderRaidGuild(
+  //   client,
+  //   TEMP_INVOICE_ADDRESS
+  // );
 
-  if (!isInvoiceProviderRaidGuild) {
-    return;
-  }
+  // if (!isInvoiceProviderRaidGuild) {
+  //   return;
+  // }
 
   const allRaidGuildInvoices = await getAllRaidGuildInvoices(client);
 
+  if (!allRaidGuildInvoices) {
+    await sendErrorEmbed(interaction);
+    return;
+  }
+
   if (allRaidGuildInvoices.length === 0) {
+    await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
   const allInvoicesWithSplitProviderReceiver =
     await getAllInvoicesWithPrimarySplit(client, allRaidGuildInvoices);
 
+  if (!allInvoicesWithSplitProviderReceiver) {
+    await sendErrorEmbed(interaction);
+    return;
+  }
+
   if (allInvoicesWithSplitProviderReceiver.length === 0) {
+    await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
@@ -68,7 +114,13 @@ export const syncInvoiceDataInteraction = async (
       allInvoicesWithSplitProviderReceiver
     );
 
+  if (!allInvoicesWithSecondarySplitRecipients) {
+    await sendErrorEmbed(interaction);
+    return;
+  }
+
   if (allInvoicesWithSecondarySplitRecipients.length === 0) {
+    await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
@@ -92,6 +144,8 @@ export const syncInvoiceDataInteraction = async (
       .toArray()) as InvoiceDocument[];
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
+    await sendErrorEmbed(interaction);
+    return;
   }
 
   const invoiceXpDistroData = getInvoiceXpDistroData(
@@ -100,17 +154,23 @@ export const syncInvoiceDataInteraction = async (
   );
 
   if (invoiceXpDistroData.length === 0) {
+    await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
-  const allPayoutInfo = await getRaidDataFromInvoiceAddresses(
+  let allPayoutInfo = await getRaidDataFromInvoiceAddresses(
     client,
     invoiceXpDistroData
   );
 
   if (!allPayoutInfo) {
+    await sendErrorEmbed(interaction);
     return;
   }
+
+  allPayoutInfo = allPayoutInfo.filter(
+    payoutInfo => payoutInfo.classKey !== null
+  );
 
   const discordTagToEthAddressMap: Record<string, string> =
     allPayoutInfo.reduce((acc, payoutInfo) => {
@@ -125,6 +185,7 @@ export const syncInvoiceDataInteraction = async (
     );
 
   if (!discordTagToCharacterAccountMap1) {
+    await sendErrorEmbed(interaction);
     return;
   }
 
@@ -140,7 +201,10 @@ export const syncInvoiceDataInteraction = async (
       allPayoutInfoWithoutAccountAddresses
     );
 
-    if (!tx) return;
+    if (!tx) {
+      await sendErrorEmbed(interaction);
+      return;
+    }
 
     const txHash = tx.hash;
 
@@ -157,14 +221,14 @@ export const syncInvoiceDataInteraction = async (
       embeds: [embed]
     });
 
-    const txReceipt = await tx.wait();
+    const txReceipt = await tx.wait(2);
 
     if (!txReceipt.status) {
       embed = new EmbedBuilder()
-        .setTitle('Class XP Transaction Failed!')
+        .setTitle('Character Creation Transaction Failed!')
         .setURL(`${EXPLORER_URL}/tx/${txHash}`)
         .setDescription(
-          `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+          `Transaction failed. View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
         )
         .setColor('#ff3864')
         .setTimestamp();
@@ -174,6 +238,18 @@ export const syncInvoiceDataInteraction = async (
       });
       return;
     }
+
+    embed = new EmbedBuilder()
+      .setTitle('New Characters Created! Invoices Still Syncing...')
+      .setDescription(
+        `View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.editReply({
+      embeds: [embed]
+    });
   }
 
   const [discordTagToCharacterAccountMap2] =
@@ -183,6 +259,7 @@ export const syncInvoiceDataInteraction = async (
     );
 
   if (!discordTagToCharacterAccountMap2) {
+    await sendErrorEmbed(interaction);
     return;
   }
 
@@ -195,6 +272,7 @@ export const syncInvoiceDataInteraction = async (
   });
 
   if (allPayoutInfoWithAccountAddresses.length === 0) {
+    await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
@@ -204,7 +282,10 @@ export const syncInvoiceDataInteraction = async (
 
   tx = await giveClassXp(client, finalPayoutInfo);
 
-  if (!tx) return;
+  if (!tx) {
+    await sendErrorEmbed(interaction);
+    return;
+  }
 
   const txHash = tx.hash;
 
@@ -212,7 +293,7 @@ export const syncInvoiceDataInteraction = async (
     .setTitle('Class XP Transaction Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
-      `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      `Transaction is pending. View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -238,6 +319,16 @@ export const syncInvoiceDataInteraction = async (
     });
     return;
   }
+
+  embed = new EmbedBuilder()
+    .setTitle('Class XP Given! Invoices Still Syncing...')
+    .setDescription(`View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`)
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.editReply({
+    embeds: [embed]
+  });
 
   const updatedInvoiceDocuments = formattedInvoiceDocuments.map(
     invoiceDocument => {
@@ -280,11 +371,15 @@ export const syncInvoiceDataInteraction = async (
   }
 
   if (!result) {
+    await sendErrorEmbed(interaction);
     return;
   }
 
   embed = new EmbedBuilder()
     .setTitle('Sync Complete!')
+    .setDescription(
+      'Invoice data has been synced with characters. View the game at https://play.raidguild.org'
+    )
     .setColor('#ff3864')
     .setTimestamp();
 
