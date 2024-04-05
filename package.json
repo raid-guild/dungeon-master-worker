@@ -19,7 +19,7 @@
     "mongodb": "^6.2.0",
     "openai": "^3.2.1",
     "ts-node": "^10.9.1",
-    "viem": "^1.17.1"
+    "viem": "^2.9.9"
   },
   "scripts": {
     "deploy-commands": "ts-node -T src/deploy-commands.ts",

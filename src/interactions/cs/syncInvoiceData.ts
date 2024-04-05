@@ -4,6 +4,8 @@ import {
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
+import { createPublicClient, http } from 'viem';
+import { gnosis, sepolia } from 'viem/chains';
 
 import {
   formatInvoiceXpDistributionDocuments,
@@ -27,6 +29,17 @@ import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 // const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
+
+const getChain = (chainId: string) => {
+  switch (Number(chainId)) {
+    case gnosis.id:
+      return gnosis;
+    case sepolia.id:
+      return sepolia;
+    default:
+      return sepolia;
+  }
+};
 
 const sendErrorEmbed = async (
   interaction:
@@ -147,6 +160,62 @@ export const syncInvoiceDataInteraction = async (
   if (!existingInvoiceXpDistributions) {
     await sendErrorEmbed(interaction);
     return;
+  }
+
+  let pendingDistributions = existingInvoiceXpDistributions.filter(
+    distro => distro.transactionStatus === TRANSACTION_STATUS.PENDING
+  );
+
+  // 4.5) Update the status of all pending distributions
+  if (pendingDistributions.length > 0) {
+    try {
+      pendingDistributions = await Promise.all(
+        pendingDistributions.map(async distro => {
+          const { transactionHash } = distro;
+
+          const publicViemClient = createPublicClient({
+            chain: getChain(distro.chainId),
+            transport: http()
+          });
+
+          const tx = await publicViemClient.getTransactionReceipt({
+            hash: transactionHash as `0x${string}`
+          });
+
+          if (!tx) {
+            return distro;
+          }
+
+          if (tx.status === 'success') {
+            return {
+              ...distro,
+              transactionStatus: TRANSACTION_STATUS.SUCCESS
+            };
+          }
+
+          if (tx.status === 'reverted') {
+            return {
+              ...distro,
+              transactionStatus: TRANSACTION_STATUS.FAILED
+            };
+          }
+
+          return distro;
+        })
+      );
+
+      await dbClient.collection('invoiceXpDistributions').bulkWrite(
+        pendingDistributions.map(distro => ({
+          updateOne: {
+            // eslint-disable-next-line no-underscore-dangle
+            filter: { _id: distro._id },
+            update: { $set: distro }
+          }
+        }))
+      );
+    } catch (err) {
+      discordLogger(JSON.stringify(err), client);
+    }
   }
 
   const xpReceivedAlready = existingInvoiceXpDistributions.reduce(
