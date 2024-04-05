@@ -10,7 +10,7 @@ import { ethers } from 'ethers';
 import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
 import { uploadToPinata } from '@/lib/pinata';
-import { ClientWithCommands, PayoutInfo } from '@/types';
+import { ClientWithCommands, InvoiceXpDistroDocument } from '@/types';
 import {
   CHARACTER_SHEETS_SUBGRAPH_URL,
   CLASS_ADDRESS,
@@ -202,14 +202,16 @@ const CLASS_KEY_TO_ID_MAP: Record<string, string> = {
   DESIGN: '12'
 };
 
-const buildGiveClassXpTransactionData = (payoutInfo: PayoutInfo) => {
+const buildGiveClassXpTransactionData = (
+  distroDoc: Omit<InvoiceXpDistroDocument, '_id'>
+) => {
   const abi = parseAbi([
     'function giveClassExp(address characterAccount, uint256 classId, uint256 amountOfExp) public'
   ]);
 
-  const accountAddress = payoutInfo.accountAddress as Address;
-  const classId = CLASS_KEY_TO_ID_MAP[payoutInfo.classKey as string];
-  const amount = formatEther(BigInt(payoutInfo.amount));
+  const accountAddress = distroDoc.accountAddress as Address;
+  const classId = CLASS_KEY_TO_ID_MAP[distroDoc.classKey as string];
+  const amount = formatEther(BigInt(distroDoc.amount));
   const amountAsInteger = Math.ceil(Number(amount));
 
   const data = encodeFunctionData({
@@ -229,12 +231,12 @@ const buildGiveClassXpTransactionData = (payoutInfo: PayoutInfo) => {
 
 export const giveClassXp = async (
   client: ClientWithCommands,
-  allPayoutInfo: PayoutInfo[]
+  distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
   const safe = await getNpcGnosisSafe();
 
-  const safeTransactionData = allPayoutInfo.map(payoutInfo => {
-    return buildGiveClassXpTransactionData(payoutInfo);
+  const safeTransactionData = distroDocs.map(distroDoc => {
+    return buildGiveClassXpTransactionData(distroDoc);
   });
 
   try {
@@ -255,14 +257,16 @@ export const giveClassXp = async (
   }
 };
 
-const buildRollCharacterTransactionData = async (payoutInfo: PayoutInfo) => {
+const buildRollCharacterTransactionData = async (
+  distroDoc: Omit<InvoiceXpDistroDocument, '_id'>
+) => {
   try {
     const characterMetadata: {
       name: string;
       description: string;
       image: string;
     } = {
-      name: payoutInfo.discordTag as string,
+      name: distroDoc.discordTag as string,
       description: '(no bio)',
       image: `ipfs://QmWxR5ghwhE9dF62Q1QwgQZqJSncmfE6XrDLetXwiFq6Wz`
     };
@@ -278,7 +282,7 @@ const buildRollCharacterTransactionData = async (payoutInfo: PayoutInfo) => {
       'function rollCharacterSheet(address player,string calldata _tokenURI) external returns (uint256)'
     ]);
 
-    const playerAddress = payoutInfo.playerAddress as Address;
+    const playerAddress = distroDoc.playerAddress as Address;
 
     const data = encodeFunctionData({
       abi,
@@ -300,14 +304,14 @@ const buildRollCharacterTransactionData = async (payoutInfo: PayoutInfo) => {
 
 export const rollCharacterSheets = async (
   client: ClientWithCommands,
-  allPayoutInfo: PayoutInfo[]
+  distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
   const safe = await getNpcGnosisSafe();
 
   try {
     const safeTransactionData = await Promise.all(
-      allPayoutInfo.map(async payoutInfo => {
-        const txData = await buildRollCharacterTransactionData(payoutInfo);
+      distroDocs.map(async distroDoc => {
+        const txData = await buildRollCharacterTransactionData(distroDoc);
         return txData;
       })
     );

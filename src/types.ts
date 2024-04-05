@@ -1,6 +1,12 @@
 import { Client, Collection } from 'discord.js';
 import { ObjectId } from 'mongodb';
 
+export enum TRANSACTION_STATUS {
+  PENDING = 'PENDING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED'
+}
+
 export type ClientWithCommands = Client & {
   commands?: Collection<string, unknown>;
 };
@@ -25,43 +31,24 @@ export type InvoiceWithSplits = Invoice & {
   secondarySplit?: {
     id: string;
     recipients: {
-      ownership: string;
+      amount: string;
       address: string;
     }[];
   };
 };
 
-export type InvoiceDocument = {
+export type InvoiceXpDistroDocument = {
   _id: ObjectId;
   chainId: string;
+  invoiceAddress: string;
   gameId: string;
-  invoiceAddress: string;
-  amount: string;
-  providerReceiver: string;
-  primarySplitId: string;
-  primarySplitRecipients: string[];
-  secondarySplitId: string;
-  secondarySplitRecipients: {
-    address: string;
-    amount: string;
-    xpReceived: boolean;
-  }[];
-};
-
-export type InvoiceXpDistroData = {
-  invoiceAddress: string;
-  amountDiff: string;
-  recipients: {
-    address: string;
-    amount: string;
-  }[];
-};
-
-export type PayoutInfo = {
-  invoiceAddress: string;
   playerAddress: string;
+  accountAddress: string;
+  discordTag: string;
+  classKey: string;
   amount: string;
-  classKey: string | null;
-  discordTag: string | null;
-  accountAddress: string | null;
+  transactionHash: string;
+  transactionStatus: string;
+  createdAt: Date;
+  updatedAt: Date;
 };

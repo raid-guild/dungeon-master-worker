@@ -1,12 +1,11 @@
 import axios from 'axios';
-import { getAddress } from 'viem';
 
 import {
   ClientWithCommands,
   Invoice,
-  InvoiceDocument,
   InvoiceWithSplits,
-  InvoiceXpDistroData
+  InvoiceXpDistroDocument,
+  TRANSACTION_STATUS
 } from '@/types';
 import {
   CHAIN_ID,
@@ -103,68 +102,55 @@ export const getAllRaidGuildInvoices = async (
   }
 };
 
-export const formatInvoiceDocument = (
-  invoice: InvoiceWithSplits
-): Omit<InvoiceDocument, '_id'> => {
-  const bigIntAmount = invoice.releases.reduce(
-    (acc, release) => acc + BigInt(release.amount),
-    BigInt(0)
-  );
-  return {
-    chainId: CHAIN_ID,
-    gameId: getAddress(RAIDGUILD_GAME_ADDRESS),
-    invoiceAddress: invoice.id,
-    amount: bigIntAmount.toString(),
-
-    providerReceiver: invoice.providerReceiver,
-    primarySplitId: invoice.primarySplit.id,
-    primarySplitRecipients: invoice.primarySplit.recipients,
-    secondarySplitId: invoice.secondarySplit?.id ?? '',
-    secondarySplitRecipients:
-      invoice.secondarySplit?.recipients.map(r => {
-        // Ownership is the percentage of the split multiplied by 10,000. So 50% would be 500000
-        return {
-          amount: (
-            (bigIntAmount * BigInt(r.ownership)) /
-            BigInt(1000000)
-          ).toString(),
-          address: r.address,
-          xpReceived: false
-        };
-      }) ?? []
-  };
-};
-
-export const getInvoiceXpDistroData = (
-  currentInvoices: Omit<InvoiceDocument, '_id'>[],
-  previousInvoices: InvoiceDocument[]
+export const formatInvoiceXpDistributionDocuments = (
+  invoices: InvoiceWithSplits[],
+  xpAlreadyReceived: Record<string, Record<string, bigint>>
 ) => {
-  return currentInvoices
-    .map(currentInvoice => {
-      const previousInvoice = previousInvoices.find(
-        prevInvoice =>
-          prevInvoice.invoiceAddress === currentInvoice.invoiceAddress
-      );
+  const newDocuments: Omit<InvoiceXpDistroDocument, '_id'>[] = [];
+  const xpOwed: Record<string, Record<string, bigint>> = {};
 
-      if (!previousInvoice) {
-        return {
-          invoiceAddress: currentInvoice.invoiceAddress,
-          amountDiff: currentInvoice.amount,
-          recipients: currentInvoice.secondarySplitRecipients
-        };
+  invoices.forEach(invoice => {
+    invoice.secondarySplit?.recipients.forEach(recipient => {
+      if (!xpOwed[invoice.id]) {
+        xpOwed[invoice.id] = {};
       }
 
-      const originalAmount = previousInvoice.amount;
-      const newAmount = currentInvoice.amount;
-      const amountDiff = (
-        BigInt(newAmount) - BigInt(originalAmount)
-      ).toString();
+      if (!xpOwed[invoice.id][recipient.address]) {
+        xpOwed[invoice.id][recipient.address] = BigInt(0);
+      }
 
-      return {
-        invoiceAddress: currentInvoice.invoiceAddress,
-        amountDiff,
-        recipients: currentInvoice.secondarySplitRecipients
-      };
-    })
-    .filter(invoice => invoice.amountDiff !== '0') as InvoiceXpDistroData[];
+      xpOwed[invoice.id][recipient.address] += BigInt(recipient.amount);
+    });
+  });
+
+  Object.entries(xpOwed).forEach(([invoiceAddress, recipients]) => {
+    Object.entries(recipients).forEach(([address, amount]) => {
+      let amountToReceive = amount;
+      if (
+        xpAlreadyReceived[invoiceAddress] &&
+        xpAlreadyReceived[invoiceAddress][address]
+      ) {
+        amountToReceive -= xpAlreadyReceived[invoiceAddress][address];
+      }
+
+      if (amount > BigInt(0)) {
+        newDocuments.push({
+          chainId: CHAIN_ID,
+          invoiceAddress,
+          gameId: RAIDGUILD_GAME_ADDRESS,
+          playerAddress: address,
+          accountAddress: '',
+          discordTag: '',
+          classKey: '',
+          amount: amountToReceive.toString(),
+          transactionHash: '',
+          transactionStatus: TRANSACTION_STATUS.PENDING,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+    });
+  });
+
+  return newDocuments;
 };

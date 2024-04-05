@@ -6,19 +6,23 @@ import {
 } from 'discord.js';
 
 import {
-  formatInvoiceDocument,
+  formatInvoiceXpDistributionDocuments,
   getAllInvoicesWithPrimarySplit,
   getAllInvoicesWithSecondarySplit,
   getAllRaidGuildInvoices,
   getCharacterAccountsByPlayerAddresses,
-  getInvoiceXpDistroData,
+  getInvoiceXpDistributions,
   // getIsInvoiceProviderRaidGuild,
   getRaidDataFromInvoiceAddresses,
   giveClassXp,
   rollCharacterSheets
 } from '@/lib';
 import { dbPromise } from '@/lib/mongodb';
-import { ClientWithCommands, InvoiceDocument } from '@/types';
+import {
+  ClientWithCommands,
+  InvoiceWithSplits,
+  TRANSACTION_STATUS
+} from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
@@ -67,6 +71,7 @@ export const syncInvoiceDataInteraction = async (
 ) => {
   let embed = new EmbedBuilder()
     .setTitle('Syncing...')
+    .setDescription('This could take a few minutes.')
     .setColor('#ff3864')
     .setTimestamp();
 
@@ -83,6 +88,7 @@ export const syncInvoiceDataInteraction = async (
   //   return;
   // }
 
+  // 1) Get all invoices with RaidGuild as the provider
   const allRaidGuildInvoices = await getAllRaidGuildInvoices(client);
 
   if (!allRaidGuildInvoices) {
@@ -95,6 +101,7 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
+  // 2) Get all RaidGuild invoices that include an 0xSplit as a receiver
   const allInvoicesWithSplitProviderReceiver =
     await getAllInvoicesWithPrimarySplit(client, allRaidGuildInvoices);
 
@@ -108,11 +115,12 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
+  // 3) Get all RaidGuild invoices that include an 0xSplit within the first 0xSplit as a receiver
   const allInvoicesWithSecondarySplitRecipients =
-    await getAllInvoicesWithSecondarySplit(
+    (await getAllInvoicesWithSecondarySplit(
       client,
       allInvoicesWithSplitProviderReceiver
-    );
+    )) as InvoiceWithSplits[];
 
   if (!allInvoicesWithSecondarySplitRecipients) {
     await sendErrorEmbed(interaction);
@@ -124,60 +132,70 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  const formattedInvoiceDocuments = allInvoicesWithSecondarySplitRecipients.map(
-    formatInvoiceDocument
+  const allInvoiceAddresses = allInvoicesWithSecondarySplitRecipients.map(
+    invoice => invoice.id
   );
 
-  const dbClient = await dbPromise;
-  let previousInvoiceDocuments: InvoiceDocument[] = [];
-
-  try {
-    previousInvoiceDocuments = (await dbClient
-      .collection('invoices')
-      .find({
-        invoiceAddress: {
-          $in: formattedInvoiceDocuments.map(
-            invoiceDocument => invoiceDocument.invoiceAddress
-          )
-        }
-      })
-      .toArray()) as InvoiceDocument[];
-  } catch (err) {
-    discordLogger(JSON.stringify(err), client);
-    await sendErrorEmbed(interaction);
-    return;
-  }
-
-  const invoiceXpDistroData = getInvoiceXpDistroData(
-    formattedInvoiceDocuments,
-    previousInvoiceDocuments as InvoiceDocument[]
-  );
-
-  if (invoiceXpDistroData.length === 0) {
-    await sendNoSyncableInvoicesEmbed(interaction);
-    return;
-  }
-
-  let allPayoutInfo = await getRaidDataFromInvoiceAddresses(
+  // 4) Get all invoice XP distributions with theses invoice addresses
+  const existingInvoiceXpDistributions = await getInvoiceXpDistributions(
     client,
-    invoiceXpDistroData
+    allInvoiceAddresses
   );
 
-  if (!allPayoutInfo) {
+  if (!existingInvoiceXpDistributions) {
     await sendErrorEmbed(interaction);
     return;
   }
 
-  allPayoutInfo = allPayoutInfo.filter(
-    payoutInfo => payoutInfo.classKey !== null
+  const xpReceivedAlready = existingInvoiceXpDistributions.reduce(
+    (acc, xpDistro) => {
+      if (!acc[xpDistro.invoiceAddress]) {
+        acc[xpDistro.invoiceAddress] = {};
+      }
+
+      if (!acc[xpDistro.invoiceAddress][xpDistro.playerAddress]) {
+        acc[xpDistro.invoiceAddress][xpDistro.playerAddress] = BigInt(0);
+      }
+
+      acc[xpDistro.invoiceAddress][xpDistro.playerAddress] += BigInt(
+        xpDistro.amount
+      );
+
+      return acc;
+    },
+    {} as Record<string, Record<string, bigint>>
+  );
+
+  // 5) Format data for database
+  let newInvoiceXpDistroDocs = formatInvoiceXpDistributionDocuments(
+    allInvoicesWithSecondarySplitRecipients,
+    xpReceivedAlready
+  );
+
+  // 6) Get Raid data using invoice addresses
+  const distroDocsWithRaidData = await getRaidDataFromInvoiceAddresses(
+    client,
+    newInvoiceXpDistroDocs
+  );
+
+  if (!distroDocsWithRaidData) {
+    await sendErrorEmbed(interaction);
+    return;
+  }
+
+  // 7) Filter out any receivers that don't have a class key in DungeonMaster or who aren't owed XP
+  newInvoiceXpDistroDocs = distroDocsWithRaidData.filter(
+    distroDoc =>
+      distroDoc.classKey !== '' && BigInt(distroDoc.amount) > BigInt(0)
   );
 
   const discordTagToEthAddressMap: Record<string, string> =
-    allPayoutInfo.reduce((acc, payoutInfo) => {
-      acc[payoutInfo.discordTag as string] = payoutInfo.playerAddress;
+    newInvoiceXpDistroDocs.reduce((acc, distroDoc) => {
+      acc[distroDoc.discordTag as string] = distroDoc.playerAddress;
       return acc;
     }, {} as Record<string, string>);
 
+  // 8) Get character accounts by player addresses
   const [discordTagToCharacterAccountMap1] =
     await getCharacterAccountsByPlayerAddresses(
       client,
@@ -189,17 +207,15 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  const allPayoutInfoWithoutAccountAddresses = allPayoutInfo.filter(
-    payoutInfo => !discordTagToCharacterAccountMap1[payoutInfo.discordTag ?? '']
+  // 9) Create characters for players that don't have a character account
+  const distroDocsWithoutAccountAddresses = newInvoiceXpDistroDocs.filter(
+    distroDoc => !discordTagToCharacterAccountMap1[distroDoc.discordTag ?? '']
   );
 
   let tx = null;
 
-  if (allPayoutInfoWithoutAccountAddresses.length > 0) {
-    tx = await rollCharacterSheets(
-      client,
-      allPayoutInfoWithoutAccountAddresses
-    );
+  if (distroDocsWithoutAccountAddresses.length > 0) {
+    tx = await rollCharacterSheets(client, distroDocsWithoutAccountAddresses);
 
     if (!tx) {
       await sendErrorEmbed(interaction);
@@ -236,6 +252,7 @@ export const syncInvoiceDataInteraction = async (
       await interaction.editReply({
         embeds: [embed]
       });
+
       return;
     }
 
@@ -252,6 +269,7 @@ export const syncInvoiceDataInteraction = async (
     });
   }
 
+  // 10) Re-fetch character accounts by player addresses
   const [discordTagToCharacterAccountMap2] =
     await getCharacterAccountsByPlayerAddresses(
       client,
@@ -263,24 +281,26 @@ export const syncInvoiceDataInteraction = async (
     return;
   }
 
-  const allPayoutInfoWithAccountAddresses = allPayoutInfo.map(payoutInfo => {
+  // 11) Add account addresses to payout info
+  newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {
     return {
-      ...payoutInfo,
+      ...distroDoc,
       accountAddress:
-        discordTagToCharacterAccountMap2[payoutInfo.discordTag ?? ''] ?? null
+        discordTagToCharacterAccountMap2[distroDoc.discordTag ?? ''] ?? null
     };
   });
 
-  if (allPayoutInfoWithAccountAddresses.length === 0) {
+  if (newInvoiceXpDistroDocs.length === 0) {
     await sendNoSyncableInvoicesEmbed(interaction);
     return;
   }
 
-  const finalPayoutInfo = allPayoutInfoWithAccountAddresses.filter(
-    payoutInfo => payoutInfo.accountAddress !== null
+  newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.filter(
+    payoutInfo => payoutInfo.accountAddress !== ''
   );
 
-  tx = await giveClassXp(client, finalPayoutInfo);
+  // 12) Give class XP to players
+  tx = await giveClassXp(client, newInvoiceXpDistroDocs);
 
   if (!tx) {
     await sendErrorEmbed(interaction);
@@ -288,6 +308,13 @@ export const syncInvoiceDataInteraction = async (
   }
 
   const txHash = tx.hash;
+
+  newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {
+    return {
+      ...distroDoc,
+      transactionHash: txHash
+    };
+  });
 
   embed = new EmbedBuilder()
     .setTitle('Class XP Transaction Pending...')
@@ -305,6 +332,13 @@ export const syncInvoiceDataInteraction = async (
   const txReceipt = await tx.wait();
 
   if (!txReceipt.status) {
+    newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {
+      return {
+        ...distroDoc,
+        transactionStatus: TRANSACTION_STATUS.FAILED
+      };
+    });
+
     embed = new EmbedBuilder()
       .setTitle('Class XP Transaction Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
@@ -330,42 +364,22 @@ export const syncInvoiceDataInteraction = async (
     embeds: [embed]
   });
 
-  const updatedInvoiceDocuments = formattedInvoiceDocuments.map(
-    invoiceDocument => {
-      return {
-        ...invoiceDocument,
-        secondarySplitRecipients: invoiceDocument.secondarySplitRecipients.map(
-          recipient => {
-            return {
-              ...recipient,
-              xpReceived: finalPayoutInfo.some(
-                payoutInfo =>
-                  payoutInfo.invoiceAddress ===
-                    invoiceDocument.invoiceAddress &&
-                  payoutInfo.playerAddress === recipient.address &&
-                  payoutInfo.classKey !== null
-              )
-            };
-          }
-        )
-      };
-    }
-  );
-
-  const updates = updatedInvoiceDocuments.map(invoiceDocument => {
+  // 13) Update invoice documents transaction status
+  newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {
     return {
-      updateOne: {
-        filter: { invoiceAddress: invoiceDocument.invoiceAddress },
-        update: { $set: invoiceDocument },
-        upsert: true
-      }
+      ...distroDoc,
+      transactionStatus: TRANSACTION_STATUS.SUCCESS
     };
   });
 
+  // 14) Add new invoice documents to database
   let result = null;
 
   try {
-    result = await dbClient.collection('invoices').bulkWrite(updates);
+    const dbClient = await dbPromise;
+    result = await dbClient
+      .collection('invoiceXpDistributions')
+      .insertMany(newInvoiceXpDistroDocs);
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
   }

@@ -123,6 +123,10 @@ export const getAllInvoicesWithSecondarySplit = async (
     );
 
     return allInvoicesWithSecondarySplit.map(invoice => {
+      const bigIntAmount = invoice.releases.reduce(
+        (acc, release) => acc + BigInt(release.amount),
+        BigInt(0)
+      );
       const primaryRecipients = invoice.primarySplit.recipients;
       const secondarySplit = response.data.data.splits.find(
         (split: { id: string; recipients: { account: { id: string } }[] }) =>
@@ -135,8 +139,11 @@ export const getAllInvoicesWithSecondarySplit = async (
           recipients: secondarySplit.recipients.map(
             (recipient: { ownership: string; account: { id: string } }) => ({
               // Ownership is the percentage of the split multiplied by 10,000. So 50% would be 500000
-              ownership: recipient.ownership,
-              address: recipient.account.id
+              address: recipient.account.id,
+              amount: (
+                (bigIntAmount * BigInt(recipient.ownership)) /
+                BigInt(1000000)
+              ).toString()
             })
           )
         }

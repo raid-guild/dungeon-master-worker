@@ -2,7 +2,11 @@ import { WithId } from 'mongodb';
 import { getAddress } from 'viem';
 
 import { dbPromise } from '@/lib/mongodb';
-import { ClientWithCommands } from '@/types';
+import {
+  ClientWithCommands,
+  InvoiceXpDistroDocument,
+  TRANSACTION_STATUS
+} from '@/types';
 import { COOLDOWN_TIME, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
@@ -245,6 +249,31 @@ export const getMcTipProposal = async (
     return result as WithId<McTipData>;
   } catch (err) {
     discordLogger(`Error getting latestXpMcTips: ${err}`, client);
+    return null;
+  }
+};
+
+export const getInvoiceXpDistributions = async (
+  client: ClientWithCommands,
+  invoiceAddresses: string[]
+) => {
+  try {
+    const dbClient = await dbPromise;
+
+    const existingInvoiceXpDistributionDocuments = (await dbClient
+      .collection('invoiceXpDistributions')
+      .find({
+        invoiceAddress: {
+          $in: invoiceAddresses
+        },
+        transactionStatus: {
+          $in: [TRANSACTION_STATUS.PENDING, TRANSACTION_STATUS.SUCCESS]
+        }
+      })
+      .toArray()) as InvoiceXpDistroDocument[];
+    return existingInvoiceXpDistributionDocuments;
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
     return null;
   }
 };
