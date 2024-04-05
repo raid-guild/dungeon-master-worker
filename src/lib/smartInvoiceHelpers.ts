@@ -136,6 +136,7 @@ export const formatInvoiceXpDistributionDocuments = (
       if (amount > BigInt(0)) {
         newDocuments.push({
           chainId: CHAIN_ID,
+          raidChannelId: '',
           invoiceAddress,
           gameId: RAIDGUILD_GAME_ADDRESS,
           playerAddress: address,

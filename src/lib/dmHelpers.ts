@@ -111,6 +111,7 @@ export const getRaidDataFromInvoiceAddresses = async (
           invoiceAddresses
         )}}}) {
           invoice_address
+          raid_channel_id
           cleric {
             eth_address
             contact_info {
@@ -156,6 +157,7 @@ export const getRaidDataFromInvoiceAddresses = async (
     const { raids } = response.data.data as {
       raids: {
         invoice_address: string;
+        raid_channel_id: string;
         cleric: { eth_address: string; contact_info: { discord: string } };
         hunter: { eth_address: string; contact_info: { discord: string } };
         raid_parties: {
@@ -171,13 +173,7 @@ export const getRaidDataFromInvoiceAddresses = async (
           raid => raid.invoice_address === distroData.invoiceAddress
         );
 
-        if (!raidData) {
-          return {
-            ...distroData,
-            discordTag: '',
-            classKey: ''
-          };
-        }
+        if (!raidData) return distroData;
 
         const { playerAddress } = distroData;
         const raidPartyMember = raidData.raid_parties.find(
@@ -187,6 +183,7 @@ export const getRaidDataFromInvoiceAddresses = async (
         if (playerAddress === raidData.cleric?.eth_address) {
           return {
             ...distroData,
+            raidChannelId: raidData.raid_channel_id,
             discordTag: raidData.cleric.contact_info.discord,
             classKey: 'ACCOUNT_MANAGER'
           };
@@ -195,6 +192,7 @@ export const getRaidDataFromInvoiceAddresses = async (
         if (playerAddress === raidData.hunter?.eth_address) {
           return {
             ...distroData,
+            raidChannelId: raidData.raid_channel_id,
             discordTag: raidData.hunter.contact_info.discord,
             classKey: 'BIZ_DEV'
           };
@@ -203,13 +201,13 @@ export const getRaidDataFromInvoiceAddresses = async (
         if (!raidPartyMember) {
           return {
             ...distroData,
-            discordTag: '',
-            classKey: ''
+            raidChannelId: raidData.raid_channel_id
           };
         }
 
         return {
           ...distroData,
+          raidChannelId: raidData.raid_channel_id,
           discordTag: raidPartyMember.member.contact_info.discord,
           classKey: raidPartyMember.raider_class_key
         };

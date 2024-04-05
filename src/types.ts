@@ -39,6 +39,7 @@ export type InvoiceWithSplits = Invoice & {
 
 export type InvoiceXpDistroDocument = {
   _id: ObjectId;
+  raidChannelId: string;
   chainId: string;
   invoiceAddress: string;
   gameId: string;

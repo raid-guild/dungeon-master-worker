@@ -1,6 +1,7 @@
 import {
   ChatInputCommandInteraction,
   EmbedBuilder,
+  GuildTextBasedChannel,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
@@ -259,6 +260,35 @@ export const syncInvoiceDataInteraction = async (
     distroDoc =>
       distroDoc.classKey !== '' && BigInt(distroDoc.amount) > BigInt(0)
   );
+
+  // 7.5) Warn raid Discord channel that some players didn't receive XP
+  const discordTagsWithoutClassKey = distroDocsWithRaidData.filter(
+    distroDoc => distroDoc.classKey === '' && distroDoc.raidChannelId !== ''
+  );
+
+  const raidChannelIds = new Set(
+    discordTagsWithoutClassKey.map(distroDoc => distroDoc.raidChannelId)
+  );
+
+  try {
+    await Promise.all(
+      Array.from(raidChannelIds).map(async raidChannelId => {
+        const raidChannel = (await client.channels.fetch(
+          raidChannelId
+        )) as GuildTextBasedChannel;
+
+        if (!raidChannel) {
+          return;
+        }
+
+        await raidChannel.send(
+          'WARNING: Some players did not receive XP for this raid. Ensure to keep all data up-to-date in DungeonMaster, then sync invoices again.'
+        );
+      })
+    );
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+  }
 
   const discordTagToEthAddressMap: Record<string, string> =
     newInvoiceXpDistroDocs.reduce((acc, distroDoc) => {
