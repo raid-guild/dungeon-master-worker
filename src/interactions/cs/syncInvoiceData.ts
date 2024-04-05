@@ -79,6 +79,8 @@ export const syncInvoiceDataInteraction = async (
     embeds: [embed]
   });
 
+  const dbClient = await dbPromise;
+
   // const isInvoiceProviderRaidGuild = await getIsInvoiceProviderRaidGuild(
   //   client,
   //   TEMP_INVOICE_ADDRESS
@@ -339,6 +341,16 @@ export const syncInvoiceDataInteraction = async (
       };
     });
 
+    let result = null;
+
+    try {
+      result = await dbClient
+        .collection('invoiceXpDistributions')
+        .insertMany(newInvoiceXpDistroDocs);
+    } catch (err) {
+      discordLogger(JSON.stringify(err), client);
+    }
+
     embed = new EmbedBuilder()
       .setTitle('Class XP Transaction Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
@@ -351,6 +363,11 @@ export const syncInvoiceDataInteraction = async (
     await interaction.editReply({
       embeds: [embed]
     });
+
+    if (!result) {
+      await sendErrorEmbed(interaction);
+    }
+
     return;
   }
 
@@ -376,7 +393,6 @@ export const syncInvoiceDataInteraction = async (
   let result = null;
 
   try {
-    const dbClient = await dbPromise;
     result = await dbClient
       .collection('invoiceXpDistributions')
       .insertMany(newInvoiceXpDistroDocs);
