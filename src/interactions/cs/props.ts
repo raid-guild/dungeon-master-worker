@@ -17,7 +17,7 @@ import { ClientWithCommands } from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const tipXpInteraction = async (
+export const propsInteraction = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction

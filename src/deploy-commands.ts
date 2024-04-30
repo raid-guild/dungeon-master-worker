@@ -2,10 +2,10 @@ import { REST, Routes } from 'discord.js';
 
 import {
   queryCommand,
-  syncInvoiceDataCommand,
-  tipXpAttendanceCommand,
-  tipXpCommand,
-  tipXpMcCommand
+  // syncInvoiceDataCommand,
+  // tipXpAttendanceCommand,
+  propsCommand
+  // tipXpMcCommand
 } from '@/commands';
 import {
   DISCORD_DM_CLIENT_ID,
@@ -14,11 +14,11 @@ import {
 } from '@/utils/constants';
 
 const commands = [
-  queryCommand.toJSON(),
-  syncInvoiceDataCommand.toJSON(),
-  tipXpMcCommand.toJSON(),
-  tipXpCommand.toJSON(),
-  tipXpAttendanceCommand.toJSON()
+  propsCommand.toJSON(),
+  queryCommand.toJSON()
+  // syncInvoiceDataCommand.toJSON(),
+  // tipXpMcCommand.toJSON(),
+  // tipXpAttendanceCommand.toJSON()
 ];
 
 const rest = new REST().setToken(DISCORD_DM_TOKEN);

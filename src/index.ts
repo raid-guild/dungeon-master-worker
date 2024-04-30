@@ -9,18 +9,18 @@ import {
 } from 'discord.js';
 
 import {
+  propsCommand,
   queryCommand,
   syncInvoiceDataCommand,
   tipXpAttendanceCommand,
-  tipXpCommand,
   tipXpMcCommand
 } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import {
+  propsInteraction,
   queryInteraction,
   syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
-  tipXpInteraction,
   tipXpMcInteraction
 } from '@/interactions';
 import { MC_XP_TIP_AMOUNT } from '@/interactions/cs/tipXpMc';
@@ -46,9 +46,9 @@ export const setupDungeonMasterWorker = () => {
     partials: [Partials.Message, Partials.Reaction]
   });
   client.commands = new Collection();
+  client.commands.set(propsCommand.name, propsCommand);
   client.commands.set(queryCommand.name, queryCommand);
   client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
-  client.commands.set(tipXpCommand.name, tipXpCommand);
   client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
   client.commands.set(tipXpMcCommand.name, tipXpMcCommand);
 
@@ -71,7 +71,7 @@ export const setupDungeonMasterWorker = () => {
     const channelId = interaction.channel?.id;
     const channel = interaction.guild?.channels.cache.get(channelId ?? '');
     const allowedAnywhereCommands = [
-      tipXpCommand.name,
+      propsCommand.name,
       tipXpAttendanceCommand.name,
       tipXpMcCommand.name
     ];
@@ -97,8 +97,8 @@ export const setupDungeonMasterWorker = () => {
       case syncInvoiceDataCommand.name:
         await syncInvoiceDataInteraction(client, interaction);
         break;
-      case tipXpCommand.name:
-        await tipXpInteraction(client, interaction);
+      case propsCommand.name:
+        await propsInteraction(client, interaction);
         break;
       case tipXpAttendanceCommand.name:
         await tipXpAttendanceInteraction(client, interaction);
