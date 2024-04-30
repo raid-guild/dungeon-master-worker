@@ -36,6 +36,7 @@ export const HASURA_GRAPHQL_ENDPOINT =
 export const HASURA_GRAPHQL_ADMIN_SECRET =
   process.env.HASURA_GRAPHQL_ADMIN_SECRET ?? '';
 
+export const CHAIN_ID = process.env.CHAIN_ID ?? '';
 export const RAIDGUILD_GAME_ADDRESS = process.env.RAIDGUILD_GAME_ADDRESS ?? '';
 export const CHARACTER_SHEETS_SUBGRAPH_URL =
   process.env.CHARACTER_SHEETS_SUBGRAPH_URL ?? '';
@@ -45,6 +46,13 @@ export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
 export const RPC_URL = process.env.RPC_URL ?? '';
 export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
 export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
+export const CLASS_ADDRESS = process.env.CLASS_ADDRESS ?? '';
+export const PINATA_JWT = process.env.PINATA_JWT ?? '';
+
+export const SMART_INVOICE_SUBGRAPH_URL =
+  process.env.SMART_INVOICE_SUBGRAPH_URL ?? '';
+export const RAIDGUILD_DAO_ADDRESS = process.env.RAIDGUILD_DAO_ADDRESS ?? '';
+export const SPLIT_SUBGRAPH_URL = process.env.SPLIT_SUBGRAPH_URL ?? '';
 
 export const COOLDOWN_TIME = process.env.COOLDOWN_TIME
   ? Number(process.env.COOLDOWN_TIME)
@@ -54,3 +62,6 @@ export const TIP_PROPOSAL_REACTION_THRESHOLD = process.env
   .TIP_PROPOSAL_REACTION_THRESHOLD
   ? Number(process.env.TIP_PROPOSAL_REACTION_THRESHOLD)
   : 5;
+
+export const WXDAI_CONTRACT_ADDRESS =
+  '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d';

@@ -37,3 +37,9 @@ export const tipXpMcCommand = new SlashCommandBuilder()
       )
       .setRequired(true)
   );
+
+export const syncInvoiceDataCommand = new SlashCommandBuilder()
+  .setName('sync-invoice-data')
+  .setDescription(
+    'Syncs the Smart Escrow invoice data with CharacterSheets XP'
+  );

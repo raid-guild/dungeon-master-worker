@@ -10,7 +10,7 @@ import {
   checkUserNeedsCooldown,
   dropExp,
   getCharacterAccountsByPlayerAddresses,
-  getPlayerAddressesByDiscordHandles,
+  getPlayerAddressesByDiscordTags,
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
@@ -79,7 +79,7 @@ export const tipXpInteraction = async (
     return;
   }
 
-  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordHandles(
+  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordTags(
     client,
     interaction,
     [interaction.member as GuildMember]
@@ -104,7 +104,7 @@ export const tipXpInteraction = async (
   }
 
   const [discordTagToEthAddressMap, discordTagsWithoutEthAddress] =
-    await getPlayerAddressesByDiscordHandles(
+    await getPlayerAddressesByDiscordTags(
       client,
       interaction,
       discordMembers as GuildMember[]
@@ -117,12 +117,11 @@ export const tipXpInteraction = async (
   const [discordTagToCharacterAccountMap, discordTagsWithoutCharacterAccounts] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      interaction,
-      discordTagToEthAddressMap
+      discordTagToEthAddressMap,
+      interaction
     );
   if (!discordTagToCharacterAccountMap) return;
   const accountAddresses = Object.values(discordTagToCharacterAccountMap);
-  if (!accountAddresses) return;
 
   if (accountAddresses.length === 0) {
     const embed = new EmbedBuilder()

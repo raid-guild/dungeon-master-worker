@@ -11,7 +11,7 @@ import { getAddress } from 'viem';
 import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
-  getPlayerAddressesByDiscordHandles,
+  getPlayerAddressesByDiscordTags,
   updateLatestXpMcTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
@@ -148,7 +148,7 @@ export const tipXpMcInteraction = async (
     return;
   }
 
-  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordHandles(
+  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordTags(
     client,
     interaction,
     [interaction.member as GuildMember]
@@ -172,7 +172,7 @@ export const tipXpMcInteraction = async (
     return;
   }
 
-  const [discordTagToEthAddressMap] = await getPlayerAddressesByDiscordHandles(
+  const [discordTagToEthAddressMap] = await getPlayerAddressesByDiscordTags(
     client,
     interaction,
     meetingMcDiscordMembers as GuildMember[]
@@ -185,8 +185,8 @@ export const tipXpMcInteraction = async (
   const [discordTagToCharacterAccountMap] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      interaction,
-      discordTagToEthAddressMap
+      discordTagToEthAddressMap,
+      interaction
     );
   if (!discordTagToCharacterAccountMap) return;
   const accountAddresses = Object.values(discordTagToCharacterAccountMap);
