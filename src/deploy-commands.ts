@@ -4,6 +4,7 @@ import {
   queryCommand,
   // syncInvoiceDataCommand,
   tipJesterCommand,
+  tipScribeCommand,
   propsCommand
   // tipXpMcCommand
 } from '@/commands';
@@ -17,7 +18,8 @@ const commands = [
   propsCommand.toJSON(),
   queryCommand.toJSON(),
   // syncInvoiceDataCommand.toJSON(),
-  tipJesterCommand.toJSON()
+  tipJesterCommand.toJSON(),
+  tipScribeCommand.toJSON()
   // tipXpAttendanceCommand.toJSON()
 ];
 

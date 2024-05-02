@@ -14,8 +14,11 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import { CHAIN_ID, EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
+
+const TIP_AMOUNT = '10';
+const TABLE_NAME = 'latestProps';
 
 export const propsInteraction = async (
   client: ClientWithCommands,
@@ -24,9 +27,6 @@ export const propsInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  const TIP_AMOUNT = '10';
-  const TABLE_NAME = 'latestXpTips';
-
   if (!EXPLORER_URL) {
     discordLogger('Missing EXPLORER_URL env', client);
     return;
@@ -229,12 +229,12 @@ export const propsInteraction = async (
     lastSenderDiscordId: senderId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    chainId: '5',
+    chainId: CHAIN_ID,
     txHash,
     message
   };
 
-  await updateLatestXpTip(client, 'latestXpTips', data);
+  await updateLatestXpTip(client, TABLE_NAME, data);
 
   await interaction.editReply({
     embeds: [embed]

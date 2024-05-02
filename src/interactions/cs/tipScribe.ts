@@ -12,24 +12,22 @@ import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
   getPlayerAddressesByDiscordTags,
-  updateLatestXpMcTip
+  updateLatestXpMcTip,
+  giveClassExp
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
   CHAIN_ID,
   EXPLORER_URL,
-  RAIDGUILD_GAME_ADDRESS,
-  TIP_PROPOSAL_REACTION_THRESHOLD
+  RAIDGUILD_GAME_ADDRESS
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import { completeJesterTip } from './completeJesterTip';
 
-export const JESTER_TIP_AMOUNT = '50';
-export const TABLE_NAME = 'latestJesterTips';
+export const SCRIBE_TIP_AMOUNT = '50';
+const TABLE_NAME = 'latestScribeTips';
 const MINIMUM_ATTENDEES = 6;
-const PROPOSAL_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
 
-export const tipJesterInteraction = async (
+export const tipScribeInteraction = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
@@ -42,6 +40,21 @@ export const tipJesterInteraction = async (
   }
 
   const senderId = interaction.user.id;
+  const isSyncSteward = senderId === process.env.DISCORD_SYNC_STEWARD_ID;
+
+  if (!isSyncSteward) {
+    const embed = new EmbedBuilder()
+      .setTitle('Unauthorized')
+      .setDescription(`Only the Sync Steward is authorized to tip the Scribe.`)
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.followUp({
+      embeds: [embed]
+    });
+    return;
+  }
+
   const {
     endTime,
     lastSenderDiscordId,
@@ -52,9 +65,9 @@ export const tipJesterInteraction = async (
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
-      .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
+      .setTitle('<:scribe:757734310345310289> Scribe Tip Proposal')
       .setDescription(
-        `There is already a proposal to tip the Jester for this meeting. However, that proposal will expire at ${new Date(
+        `There is already a proposal to tip the Scribe for this meeting. However, that proposal will expire at ${new Date(
           proposalExpiration ?? 0
         ).toLocaleString()}.`
       )
@@ -69,12 +82,12 @@ export const tipJesterInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('<:jester:1222930129999626271> Jester Tip Cooldown')
+      .setTitle('<:scribe:757734310345310289> Scribe Tip Cooldown')
       .setDescription(
         `All members must wait ${
           endTime
-            ? `until ${endTime} to tip the Jester again.`
-            : '24 hours between Jester tipping.'
+            ? `until ${endTime} to tip the Scribe again.`
+            : '24 hours between Scribe tips.'
         } `
       )
       .setColor('#ff3864')
@@ -95,7 +108,7 @@ export const tipJesterInteraction = async (
   if (!voiceChannel.isVoiceBased()) {
     const embed = new EmbedBuilder()
       .setTitle('Not a Voice Channel')
-      .setDescription(`You must be in a voice channel to tip the Jester.`)
+      .setDescription(`You must be in a voice channel to tip the Scribe.`)
       .setColor('#ff3864')
       .setTimestamp();
 
@@ -112,7 +125,7 @@ export const tipJesterInteraction = async (
     const embed = new EmbedBuilder()
       .setTitle('Not Enough Attendees')
       .setDescription(
-        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to tip the Jester.`
+        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to tip the Scribe.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -134,7 +147,7 @@ export const tipJesterInteraction = async (
   if (recipientIds.length !== 1) {
     const embed = new EmbedBuilder()
       .setTitle('Invalid Recipient')
-      .setDescription(`You are only able to tip one recipient as Jester.`)
+      .setDescription(`You are only able to tip one recipient as Scribe.`)
       .setColor('#ff3864')
       .setTimestamp();
 
@@ -144,17 +157,17 @@ export const tipJesterInteraction = async (
     return;
   }
 
-  const meetingMcDiscordMembers = recipientIds.map(id =>
+  const meetingScribeDiscordMembers = recipientIds.map(id =>
     interaction.guild?.members.cache.get(id)
   );
 
-  const meetingMcDiscordUsernames = meetingMcDiscordMembers.map(
+  const meetingScribeDiscordUsernames = meetingScribeDiscordMembers.map(
     m => m?.user.tag
   );
 
   if (
-    meetingMcDiscordMembers.some(m => !m) ||
-    meetingMcDiscordUsernames.some(m => !m)
+    meetingScribeDiscordMembers.some(m => !m) ||
+    meetingScribeDiscordUsernames.some(m => !m)
   ) {
     await interaction.followUp({
       content: 'Discord handle was not formatted correctly!'
@@ -189,7 +202,7 @@ export const tipJesterInteraction = async (
   const [discordTagToEthAddressMap] = await getPlayerAddressesByDiscordTags(
     client,
     interaction,
-    meetingMcDiscordMembers as GuildMember[]
+    meetingScribeDiscordMembers as GuildMember[]
   );
 
   if (!discordTagToEthAddressMap) return;
@@ -210,7 +223,7 @@ export const tipJesterInteraction = async (
     const embed = new EmbedBuilder()
       .setTitle('No Characters Found')
       .setDescription(
-        `No characters were found for the following user: <@${meetingMcDiscordMembers[0]?.id}>.\n---\nIf you think this is an error, ensure that your Discord handle and ETH address are registered correctly in DungeonMaster.`
+        `No characters were found for the following user: <@${meetingScribeDiscordMembers[0]?.id}>.\n---\nIf you think this is an error, ensure that your Discord handle and ETH address are registered correctly in DungeonMaster.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -221,9 +234,7 @@ export const tipJesterInteraction = async (
     return;
   }
 
-  const newProposalExpiration = Date.now() + PROPOSAL_EXPIRATION_TIME;
-
-  const jesterTipData = {
+  const scribeTipData = {
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
@@ -231,49 +242,78 @@ export const tipJesterInteraction = async (
     chainId: CHAIN_ID,
     txHash: '',
     messageId: '',
-    proposalExpiration: newProposalExpiration,
-    receivingDiscordId: meetingMcDiscordMembers[0]?.id,
+    receivingDiscordId: meetingScribeDiscordMembers[0]?.id,
     receivingAddress: accountAddresses[0],
     tipPending: false
   };
 
-  const isSyncSteward = senderId === process.env.DISCORD_SYNC_STEWARD_ID;
+  if (!scribeTipData.receivingAddress)
+    throw new Error('No receiving address found!');
 
-  if (isSyncSteward && interaction.channel) {
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
-    await completeJesterTip(
-      client,
-      {
-        ...jesterTipData,
-        senderDiscordId: senderId
-      },
-      {
-        interaction: interaction as ChatInputCommandInteraction
-      }
-    );
-  } else {
-    const embed = new EmbedBuilder()
-      .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
+  let embed = new EmbedBuilder()
+    .setTitle('<:scribe:757734310345310289> Scribe Tip Pending...')
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.followUp({ embeds: [embed] });
+
+  scribeTipData.tipPending = true;
+  await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
+
+  const tx = await giveClassExp(client, accountAddresses[0], '4');
+  if (!tx) {
+    scribeTipData.tipPending = false;
+    await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
+    return;
+  }
+
+  const txHash = tx.hash;
+
+  embed = new EmbedBuilder()
+    .setTitle('<:scribe:757734310345310289> Scribe Tip Transaction Pending...')
+    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setDescription(
+      `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+    )
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [embed] });
+
+  const txReceipt = await tx.wait();
+
+  if (!txReceipt.status) {
+    scribeTipData.txHash = txHash;
+    scribeTipData.tipPending = false;
+    await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
+
+    embed = new EmbedBuilder()
+      .setTitle('<:scribe:757734310345310289> Scribe Tip Transaction Failed!')
+      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
       .setDescription(
-        `<@${senderId}> is proposing to tip ${JESTER_TIP_AMOUNT} Jester XP to <@${
-          meetingMcDiscordMembers[0]?.id
-        }> for jestering this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
-          newProposalExpiration
-        ).toLocaleString()}.`
+        `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
 
-    const message = await interaction.followUp({
-      embeds: [embed]
-    });
-    await message.react('1222930129999626271');
-
-    jesterTipData.messageId = message.id;
-
-    await interaction.followUp({
-      content: '@here ^^^'
-    });
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
+    await interaction.editReply({ embeds: [embed] });
+    return;
   }
+
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
+
+  embed = new EmbedBuilder()
+    .setTitle('<:scribe:757734310345310289> Scribe Tip Succeeded!')
+    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setDescription(
+      `<@${scribeTipData.receivingDiscordId}>'s character received ${SCRIBE_TIP_AMOUNT} Scribe XP for documenting this meeting.${viewGameMessage}`
+    )
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  scribeTipData.txHash = txHash;
+  scribeTipData.tipPending = false;
+
+  await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
+  await interaction.editReply({ embeds: [embed] });
 };
