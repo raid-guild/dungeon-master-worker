@@ -5,7 +5,8 @@ import {
   Events,
   GatewayIntentBits,
   Partials,
-  User
+  User,
+  TextChannel
 } from 'discord.js';
 
 import {
@@ -23,14 +24,12 @@ import {
   tipXpAttendanceInteraction,
   tipJesterInteraction
 } from '@/interactions';
-import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipJester';
-import { giveClassExp, getMcTipProposal, updateLatestXpMcTip } from '@/lib';
-import { McTipData } from '@/lib/dbHelpers';
+import { completeJesterTip } from '@/interactions';
+import { getMcTipProposal } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
   DISCORD_DM_TOKEN,
-  EXPLORER_URL,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
@@ -163,101 +162,11 @@ export const setupDungeonMasterWorker = () => {
         return;
       }
 
-      let embed = new EmbedBuilder()
-        .setTitle('<:jester:1222930129999626271> Jester Tipping Pending...')
-        .setColor('#ff3864')
-        .setTimestamp();
-
-      const txMessage = await reaction.message.channel.send({
-        embeds: [embed]
-      });
-
-      let data: Omit<
-        McTipData,
-        'senderDiscordId' | 'gameAddress' | 'timestamp'
-      > & {
-        lastSenderDiscordId: string;
-        newSenderDiscordId: string;
-      } = {
-        lastSenderDiscordId: mcTipProposal.senderDiscordId,
-        newSenderDiscordId: mcTipProposal.senderDiscordId,
-        txHash: '',
-        tipPending: true
-      };
-      await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-
-      const tx = await giveClassExp(client, receivingAddress, '14');
-      if (!tx) {
-        data = {
-          lastSenderDiscordId: mcTipProposal.senderDiscordId,
-          newSenderDiscordId: mcTipProposal.senderDiscordId,
-          txHash: '',
-          tipPending: false
-        };
-        await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-        return;
-      }
-
-      const txHash = tx.hash;
-
-      embed = new EmbedBuilder()
-        .setTitle(
-          '<:jester:1222930129999626271> Jester Tipping Transaction Pending...'
-        )
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-        .setDescription(
-          `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-        )
-        .setColor('#ff3864')
-        .setTimestamp();
-      await txMessage.edit({ embeds: [embed] });
-
-      const txReceipt = await tx.wait();
-
-      if (!txReceipt.status) {
-        data = {
-          lastSenderDiscordId: mcTipProposal.senderDiscordId,
-          newSenderDiscordId: mcTipProposal.senderDiscordId,
-          txHash,
-          tipPending: false
-        };
-        await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-
-        embed = new EmbedBuilder()
-          .setTitle(
-            '<:jester:1222930129999626271> Jester Tipping Transaction Failed!'
-          )
-          .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-          .setDescription(
-            `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-          )
-          .setColor('#ff3864')
-          .setTimestamp();
-
-        await txMessage.edit({ embeds: [embed] });
-        return;
-      }
-
-      const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
-
-      embed = new EmbedBuilder()
-        .setTitle('<:jester:1222930129999626271> Jester Tipping Succeeded!')
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-        .setDescription(
-          `<@${receivingDiscordId}>'s character received ${JESTER_TIP_AMOUNT} Jester XP for MC'ing this meeting.${viewGameMessage}`
-        )
-        .setColor('#ff3864')
-        .setTimestamp();
-
-      data = {
-        lastSenderDiscordId: mcTipProposal.senderDiscordId,
-        newSenderDiscordId: mcTipProposal.senderDiscordId,
-        txHash,
-        tipPending: false
-      };
-
-      await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-      await txMessage.edit({ embeds: [embed] });
+      await completeJesterTip(
+        client,
+        mcTipProposal,
+        reaction.message.channel as TextChannel
+      );
     } catch (error) {
       discordLogger(error, client);
     }

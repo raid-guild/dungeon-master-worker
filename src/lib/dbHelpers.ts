@@ -137,7 +137,7 @@ export const updateLatestXpTip = async (
   }
 };
 
-export type McTipData = {
+export type JesterTipData = {
   senderDiscordId: string;
   gameAddress: string;
   timestamp: number;
@@ -154,7 +154,7 @@ export type McTipData = {
 export const updateLatestXpMcTip = async (
   client: ClientWithCommands,
   collectionName: string,
-  data: Omit<McTipData, 'senderDiscordId' | 'gameAddress' | 'timestamp'> & {
+  data: Omit<JesterTipData, 'senderDiscordId' | 'gameAddress' | 'timestamp'> & {
     lastSenderDiscordId: string;
     newSenderDiscordId: string;
   }
@@ -175,7 +175,7 @@ export const updateLatestXpMcTip = async (
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
 
-    const updates: McTipData = {
+    const updates: JesterTipData = {
       senderDiscordId: newSenderDiscordId,
       gameAddress,
       txHash,
@@ -236,7 +236,7 @@ export const updateLatestXpMcTip = async (
 
 export const getMcTipProposal = async (
   client: ClientWithCommands
-): Promise<WithId<McTipData> | null> => {
+): Promise<WithId<JesterTipData> | null> => {
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -246,7 +246,7 @@ export const getMcTipProposal = async (
     if (!result) {
       return null;
     }
-    return result as WithId<McTipData>;
+    return result as WithId<JesterTipData>;
   } catch (err) {
     discordLogger(`Error getting latestXpMcTips: ${err}`, client);
     return null;

@@ -3,6 +3,7 @@ import {
   EmbedBuilder,
   GuildMember,
   MessageContextMenuCommandInteraction,
+  TextChannel,
   UserContextMenuCommandInteraction,
   VoiceBasedChannel
 } from 'discord.js';
@@ -22,8 +23,10 @@ import {
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
+import { completeJesterTip } from './completeJesterTip';
 
 export const JESTER_TIP_AMOUNT = '50';
+const IS_SYNC_STEWARED = false;
 
 export const tipJesterInteraction = async (
   client: ClientWithCommands,
@@ -34,8 +37,8 @@ export const tipJesterInteraction = async (
 ) => {
   const TABLE_NAME = 'latestXpMcTips';
 
-  const MINIMUM_ATTENDEES = 6;
-  const PROPOSAL_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
+  const MINIMUM_ATTENDEES = 2;
+  const PROPOSAL_EXPIRATION_TIME = 60 * 1000; // 5 minutes
 
   if (!EXPLORER_URL) {
     discordLogger('Missing EXPLORER_URL env', client);
@@ -209,42 +212,54 @@ export const tipJesterInteraction = async (
   }
 
   const newProposalExpiration = Date.now() + PROPOSAL_EXPIRATION_TIME;
-  const embed = new EmbedBuilder()
-    .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
-    .setDescription(
-      `<@${senderId}> is proposing to tip ${JESTER_TIP_AMOUNT} Jester XP to <@${
-        meetingMcDiscordMembers[0]?.id
-      }> for jestering this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
-        newProposalExpiration
-      ).toLocaleString()}.`
-    )
-    .setColor('#ff3864')
-    .setTimestamp();
 
-  const message = await interaction.followUp({
-    embeds: [embed]
-  });
-  await message.react('1222930129999626271');
-
-  await interaction.followUp({
-    content: '@here ^^^'
-  });
-
-  const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
-
-  const data = {
+  const jesterTipData = {
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    gameAddress,
+    gameAddress: getAddress(RAIDGUILD_GAME_ADDRESS),
     chainId: CHAIN_ID,
     txHash: '',
-    messageId: message.id,
+    messageId: '',
     proposalExpiration: newProposalExpiration,
     receivingDiscordId: meetingMcDiscordMembers[0]?.id,
     receivingAddress: accountAddresses[0],
     tipPending: false
   };
 
-  await updateLatestXpMcTip(client, TABLE_NAME, data);
+  if (IS_SYNC_STEWARED && interaction.channel) {
+    await completeJesterTip(
+      client,
+      {
+        ...jesterTipData,
+        senderDiscordId: senderId
+      },
+      interaction.channel as TextChannel
+    );
+  } else {
+    const embed = new EmbedBuilder()
+      .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
+      .setDescription(
+        `<@${senderId}> is proposing to tip ${JESTER_TIP_AMOUNT} Jester XP to <@${
+          meetingMcDiscordMembers[0]?.id
+        }> for jestering this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
+          newProposalExpiration
+        ).toLocaleString()}.`
+      )
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    const message = await interaction.followUp({
+      embeds: [embed]
+    });
+    await message.react('1222930129999626271');
+
+    jesterTipData.messageId = message.id;
+
+    await interaction.followUp({
+      content: '@here ^^^'
+    });
+  }
+
+  await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
 };
