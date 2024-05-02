@@ -14,6 +14,7 @@ import {
   queryCommand,
   syncInvoiceDataCommand,
   tipJesterCommand,
+  tipScribeCommand,
   tipXpAttendanceCommand
 } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
@@ -22,7 +23,8 @@ import {
   queryInteraction,
   syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
-  tipJesterInteraction
+  tipJesterInteraction,
+  tipScribeInteraction
 } from '@/interactions';
 import { completeJesterTip } from '@/interactions';
 import { getMcTipProposal } from '@/lib';
@@ -49,6 +51,7 @@ export const setupDungeonMasterWorker = () => {
   client.commands.set(queryCommand.name, queryCommand);
   client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
   client.commands.set(tipJesterCommand.name, tipJesterCommand);
+  client.commands.set(tipScribeCommand.name, tipScribeCommand);
   client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
 
   client.once(Events.ClientReady, c => {
@@ -72,6 +75,7 @@ export const setupDungeonMasterWorker = () => {
     const allowedAnywhereCommands = [
       propsCommand.name,
       tipJesterCommand.name,
+      tipScribeCommand.name,
       tipXpAttendanceCommand.name
     ];
 
@@ -101,6 +105,9 @@ export const setupDungeonMasterWorker = () => {
         break;
       case tipJesterCommand.name:
         await tipJesterInteraction(client, interaction);
+        break;
+      case tipScribeCommand.name:
+        await tipScribeInteraction(client, interaction);
         break;
       case tipXpAttendanceCommand.name:
         await tipXpAttendanceInteraction(client, interaction);

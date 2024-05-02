@@ -36,6 +36,18 @@ export const tipJesterCommand = new SlashCommandBuilder()
       .setRequired(true)
   );
 
+export const tipScribeCommand = new SlashCommandBuilder()
+  .setName('tip-scribe')
+  .setDescription('Gives the meeting Scribe 50 Scribe XP (CharacterSheets)')
+  .addStringOption(option =>
+    option
+      .setName('recipient')
+      .setDescription(
+        'Use @mention to tip an existing character in CharacterSheets'
+      )
+      .setRequired(true)
+  );
+
 export const syncInvoiceDataCommand = new SlashCommandBuilder()
   .setName('sync-invoice-data')
   .setDescription(
