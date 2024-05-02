@@ -1,4 +1,8 @@
-import { EmbedBuilder, TextChannel } from 'discord.js';
+import {
+  EmbedBuilder,
+  ChatInputCommandInteraction,
+  MessageReaction
+} from 'discord.js';
 
 import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipJester';
 import { giveClassExp, updateLatestXpMcTip } from '@/lib';
@@ -10,7 +14,13 @@ import { discordLogger } from '@/utils/logger';
 export const completeJesterTip = async (
   client: ClientWithCommands,
   jesterTipProposal: Omit<JesterTipData, 'timestamp'>,
-  channel: TextChannel
+  {
+    interaction,
+    reaction
+  }: {
+    interaction?: ChatInputCommandInteraction;
+    reaction?: MessageReaction;
+  }
 ) => {
   try {
     const { receivingAddress, receivingDiscordId, senderDiscordId } =
@@ -23,9 +33,14 @@ export const completeJesterTip = async (
       .setColor('#ff3864')
       .setTimestamp();
 
-    const txMessage = await channel.send({
-      embeds: [embed]
-    });
+    let proposalMessage = null;
+    if (interaction) {
+      await interaction.followUp({ embeds: [embed] });
+    } else if (reaction) {
+      proposalMessage = await reaction.message.channel.send({
+        embeds: [embed]
+      });
+    }
 
     let data: Omit<
       JesterTipData,
@@ -65,7 +80,12 @@ export const completeJesterTip = async (
       )
       .setColor('#ff3864')
       .setTimestamp();
-    await txMessage.edit({ embeds: [embed] });
+
+    if (proposalMessage) {
+      await proposalMessage.edit({ embeds: [embed] });
+    } else if (interaction) {
+      await interaction.editReply({ embeds: [embed] });
+    }
 
     const txReceipt = await tx.wait();
 
@@ -89,7 +109,11 @@ export const completeJesterTip = async (
         .setColor('#ff3864')
         .setTimestamp();
 
-      await txMessage.edit({ embeds: [embed] });
+      if (proposalMessage) {
+        await proposalMessage.edit({ embeds: [embed] });
+      } else if (interaction) {
+        await interaction.editReply({ embeds: [embed] });
+      }
       return;
     }
 
@@ -112,7 +136,12 @@ export const completeJesterTip = async (
     };
 
     await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-    await txMessage.edit({ embeds: [embed] });
+
+    if (proposalMessage) {
+      await proposalMessage.edit({ embeds: [embed] });
+    } else if (interaction) {
+      await interaction.editReply({ embeds: [embed] });
+    }
   } catch (error) {
     discordLogger(error, client);
   }

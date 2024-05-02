@@ -6,7 +6,7 @@ import {
   GatewayIntentBits,
   Partials,
   User,
-  TextChannel
+  MessageReaction
 } from 'discord.js';
 
 import {
@@ -162,11 +162,9 @@ export const setupDungeonMasterWorker = () => {
         return;
       }
 
-      await completeJesterTip(
-        client,
-        mcTipProposal,
-        reaction.message.channel as TextChannel
-      );
+      await completeJesterTip(client, mcTipProposal, {
+        reaction: reaction as MessageReaction
+      });
     } catch (error) {
       discordLogger(error, client);
     }

@@ -221,8 +221,6 @@ export const giveClassExp = async (
   accountAddresses: string,
   classId: string
 ) => {
-  console.log('Giving class XP');
-
   const safe = await getNpcGnosisSafe();
 
   try {

@@ -3,7 +3,6 @@ import {
   EmbedBuilder,
   GuildMember,
   MessageContextMenuCommandInteraction,
-  TextChannel,
   UserContextMenuCommandInteraction,
   VoiceBasedChannel
 } from 'discord.js';
@@ -26,7 +25,6 @@ import { discordLogger } from '@/utils/logger';
 import { completeJesterTip } from './completeJesterTip';
 
 export const JESTER_TIP_AMOUNT = '50';
-const IS_SYNC_STEWARED = false;
 
 export const tipJesterInteraction = async (
   client: ClientWithCommands,
@@ -227,14 +225,18 @@ export const tipJesterInteraction = async (
     tipPending: false
   };
 
-  if (IS_SYNC_STEWARED && interaction.channel) {
+  const isSyncSteward = senderId === process.env.DISCORD_SYNC_STEWARD_ID;
+
+  if (isSyncSteward && interaction.channel) {
     await completeJesterTip(
       client,
       {
         ...jesterTipData,
         senderDiscordId: senderId
       },
-      interaction.channel as TextChannel
+      {
+        interaction: interaction as ChatInputCommandInteraction
+      }
     );
   } else {
     const embed = new EmbedBuilder()
