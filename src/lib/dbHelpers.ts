@@ -2,7 +2,11 @@ import { WithId } from 'mongodb';
 import { getAddress } from 'viem';
 
 import { dbPromise } from '@/lib/mongodb';
-import { ClientWithCommands } from '@/types';
+import {
+  ClientWithCommands,
+  InvoiceXpDistroDocument,
+  TRANSACTION_STATUS
+} from '@/types';
 import { COOLDOWN_TIME, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
@@ -133,7 +137,7 @@ export const updateLatestXpTip = async (
   }
 };
 
-export type McTipData = {
+export type JesterTipData = {
   senderDiscordId: string;
   gameAddress: string;
   timestamp: number;
@@ -150,7 +154,7 @@ export type McTipData = {
 export const updateLatestXpMcTip = async (
   client: ClientWithCommands,
   collectionName: string,
-  data: Omit<McTipData, 'senderDiscordId' | 'gameAddress' | 'timestamp'> & {
+  data: Omit<JesterTipData, 'senderDiscordId' | 'gameAddress' | 'timestamp'> & {
     lastSenderDiscordId: string;
     newSenderDiscordId: string;
   }
@@ -171,7 +175,7 @@ export const updateLatestXpMcTip = async (
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
 
-    const updates: McTipData = {
+    const updates: JesterTipData = {
       senderDiscordId: newSenderDiscordId,
       gameAddress,
       txHash,
@@ -232,7 +236,7 @@ export const updateLatestXpMcTip = async (
 
 export const getMcTipProposal = async (
   client: ClientWithCommands
-): Promise<WithId<McTipData> | null> => {
+): Promise<WithId<JesterTipData> | null> => {
   try {
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
@@ -242,9 +246,34 @@ export const getMcTipProposal = async (
     if (!result) {
       return null;
     }
-    return result as WithId<McTipData>;
+    return result as WithId<JesterTipData>;
   } catch (err) {
     discordLogger(`Error getting latestXpMcTips: ${err}`, client);
+    return null;
+  }
+};
+
+export const getInvoiceXpDistributions = async (
+  client: ClientWithCommands,
+  invoiceAddresses: string[]
+) => {
+  try {
+    const dbClient = await dbPromise;
+
+    const existingInvoiceXpDistributionDocuments = (await dbClient
+      .collection('invoiceXpDistributions')
+      .find({
+        invoiceAddress: {
+          $in: invoiceAddresses
+        },
+        transactionStatus: {
+          $in: [TRANSACTION_STATUS.PENDING, TRANSACTION_STATUS.SUCCESS]
+        }
+      })
+      .toArray()) as InvoiceXpDistroDocument[];
+    return existingInvoiceXpDistributionDocuments;
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
     return null;
   }
 };

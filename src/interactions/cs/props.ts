@@ -10,14 +10,14 @@ import {
   checkUserNeedsCooldown,
   dropExp,
   getCharacterAccountsByPlayerAddresses,
-  getPlayerAddressesByDiscordHandles,
+  getPlayerAddressesByDiscordTags,
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import { EXPLORER_URL } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const tipXpInteraction = async (
+export const propsInteraction = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
@@ -41,12 +41,12 @@ export const tipXpInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('XP Tipping Cooldown')
+      .setTitle('Props Cooldown')
       .setDescription(
         `You must wait ${
           endTime
-            ? `until ${endTime} to tip again.`
-            : '24 hours between tipping.'
+            ? `until ${endTime} to give props again.`
+            : '24 hours between giving props.'
         } `
       )
       .setColor('#ff3864')
@@ -79,7 +79,7 @@ export const tipXpInteraction = async (
     return;
   }
 
-  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordHandles(
+  const [senderTagToEthAddressMap] = await getPlayerAddressesByDiscordTags(
     client,
     interaction,
     [interaction.member as GuildMember]
@@ -104,7 +104,7 @@ export const tipXpInteraction = async (
   }
 
   const [discordTagToEthAddressMap, discordTagsWithoutEthAddress] =
-    await getPlayerAddressesByDiscordHandles(
+    await getPlayerAddressesByDiscordTags(
       client,
       interaction,
       discordMembers as GuildMember[]
@@ -117,12 +117,11 @@ export const tipXpInteraction = async (
   const [discordTagToCharacterAccountMap, discordTagsWithoutCharacterAccounts] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      interaction,
-      discordTagToEthAddressMap
+      discordTagToEthAddressMap,
+      interaction
     );
   if (!discordTagToCharacterAccountMap) return;
   const accountAddresses = Object.values(discordTagToCharacterAccountMap);
-  if (!accountAddresses) return;
 
   if (accountAddresses.length === 0) {
     const embed = new EmbedBuilder()
@@ -147,7 +146,7 @@ export const tipXpInteraction = async (
   const txHash = tx.hash;
 
   let embed = new EmbedBuilder()
-    .setTitle('XP Tipping Transaction Pending...')
+    .setTitle('Props XP Transaction Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -163,7 +162,7 @@ export const tipXpInteraction = async (
 
   if (!txReceipt.status) {
     embed = new EmbedBuilder()
-      .setTitle('XP Tipping Transaction Failed!')
+      .setTitle('Props XP Transaction Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
       .setDescription(
         `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -216,7 +215,7 @@ export const tipXpInteraction = async (
       : '';
 
   embed = new EmbedBuilder()
-    .setTitle('XP Tipping Succeeded!')
+    .setTitle('Props Succeeded!')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to the characters of ${discordIdsSuccessfullyTipped.map(
