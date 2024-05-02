@@ -2,6 +2,6 @@ export {
   propsInteraction,
   syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
-  tipXpMcInteraction
+  tipJesterInteraction
 } from '@/interactions/cs';
 export { queryInteraction } from '@/interactions/dm';

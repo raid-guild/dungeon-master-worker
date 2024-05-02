@@ -21,6 +21,7 @@ import {
   XP_ADDRESS
 } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
+import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipXpMc';
 
 if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
   throw new Error(
@@ -187,6 +188,70 @@ export const dropExp = async (
   }
 };
 
+const buildGiveClassExpTransactionData = (
+  accountAddress: Address,
+  classId: string,
+  amount: string
+) => {
+  try {
+    const abi = parseAbi([
+      'function giveClassExp(address characterAccount, uint256 classId, uint256 amountOfExp) public'
+    ]);
+
+    const data = encodeFunctionData({
+      abi,
+      functionName: 'giveClassExp',
+      args: [accountAddress, BigInt(classId), BigInt(amount)]
+    });
+
+    const giveClassExpTransactionData: SafeTransactionDataPartial = {
+      to: CLASS_ADDRESS,
+      data,
+      value: '0'
+    };
+
+    return giveClassExpTransactionData;
+  } catch (err) {
+    return null;
+  }
+};
+
+export const giveClassExp = async (
+  client: ClientWithCommands,
+  accountAddresses: string,
+  classId: string
+) => {
+  console.log('Giving class XP');
+
+  const safe = await getNpcGnosisSafe();
+
+  try {
+    const safeTransactionData = buildGiveClassExpTransactionData(
+      accountAddresses as Address,
+      classId,
+      JESTER_TIP_AMOUNT
+    );
+
+    if (!safeTransactionData) {
+      throw new Error('Could not build transaction data');
+    }
+
+    const safeTx = await safe.createTransaction({
+      safeTransactionData: safeTransactionData as SafeTransactionDataPartial
+    });
+
+    const txRes = await safe.executeTransaction(safeTx);
+    const tx = txRes.transactionResponse;
+
+    if (!tx) throw new Error('Could not submit transaction');
+
+    return tx;
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+    return null;
+  }
+};
+
 const CLASS_KEY_TO_ID_MAP: Record<string, string> = {
   FRONTEND_DEV: '1',
   SMART_CONTRACTS: '2',
@@ -202,46 +267,32 @@ const CLASS_KEY_TO_ID_MAP: Record<string, string> = {
   DESIGN: '12'
 };
 
-const buildGiveClassXpTransactionData = (
-  distroDoc: Omit<InvoiceXpDistroDocument, '_id'>
-) => {
-  const abi = parseAbi([
-    'function giveClassExp(address characterAccount, uint256 classId, uint256 amountOfExp) public'
-  ]);
-
-  const accountAddress = distroDoc.accountAddress as Address;
-  const classId = CLASS_KEY_TO_ID_MAP[distroDoc.classKey as string];
-  const amount = formatEther(BigInt(distroDoc.amount));
-  const amountAsInteger = Math.ceil(Number(amount));
-
-  const data = encodeFunctionData({
-    abi,
-    functionName: 'giveClassExp',
-    args: [accountAddress, BigInt(classId), BigInt(amountAsInteger)]
-  });
-
-  const giveClassExpTransactionData: SafeTransactionDataPartial = {
-    to: CLASS_ADDRESS,
-    data,
-    value: '0'
-  };
-
-  return giveClassExpTransactionData;
-};
-
-export const giveClassXp = async (
+export const giveClassExpWithDistro = async (
   client: ClientWithCommands,
   distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
   const safe = await getNpcGnosisSafe();
 
   const safeTransactionData = distroDocs.map(distroDoc => {
-    return buildGiveClassXpTransactionData(distroDoc);
+    const accountAddress = distroDoc.accountAddress as Address;
+    const classId = CLASS_KEY_TO_ID_MAP[distroDoc.classKey as string];
+    const amount = formatEther(BigInt(distroDoc.amount));
+    const amountAsInteger = Math.ceil(Number(amount));
+
+    return buildGiveClassExpTransactionData(
+      accountAddress,
+      classId,
+      amountAsInteger.toString()
+    );
   });
+
+  if (safeTransactionData.includes(null)) {
+    throw new Error('Could not build transaction data');
+  }
 
   try {
     const safeTx = await safe.createTransaction({
-      safeTransactionData
+      safeTransactionData: safeTransactionData as SafeTransactionDataPartial[]
     });
 
     const txRes = await safe.executeTransaction(safeTx);

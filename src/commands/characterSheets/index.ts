@@ -24,11 +24,9 @@ export const tipXpAttendanceCommand = new SlashCommandBuilder()
     'Gives the characters of everyone in this voice channel 20 XP'
   );
 
-export const tipXpMcCommand = new SlashCommandBuilder()
-  .setName('tip-xp-mc')
-  .setDescription(
-    'Gives the meeting MC 50 XP (CharacterSheets). 5 emoji reactions are required for the tip to succeed'
-  )
+export const tipJesterCommand = new SlashCommandBuilder()
+  .setName('tip-jester')
+  .setDescription('Gives the meeting MC 50 Jester XP (CharacterSheets)')
   .addStringOption(option =>
     option
       .setName('recipient')

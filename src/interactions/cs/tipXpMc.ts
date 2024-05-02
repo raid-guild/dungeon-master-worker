@@ -16,15 +16,16 @@ import {
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
+  CHAIN_ID,
   EXPLORER_URL,
   RAIDGUILD_GAME_ADDRESS,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const MC_XP_TIP_AMOUNT = '50';
+export const JESTER_TIP_AMOUNT = '50';
 
-export const tipXpMcInteraction = async (
+export const tipJesterInteraction = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
@@ -52,9 +53,9 @@ export const tipXpMcInteraction = async (
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
-      .setTitle('🎙️ Meeting MC XP Tip Proposal')
+      .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
       .setDescription(
-        `There is already a proposal to tip the MC for this meeting. However, that proposal will expire at ${new Date(
+        `There is already a proposal to tip the Jester for this meeting. However, that proposal will expire at ${new Date(
           proposalExpiration ?? 0
         ).toLocaleString()}.`
       )
@@ -69,12 +70,12 @@ export const tipXpMcInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('🎙️ Meeting MC XP Tipping Cooldown')
+      .setTitle('<:jester:1222930129999626271> Jester Tipping Cooldown')
       .setDescription(
         `All members must wait ${
           endTime
-            ? `until ${endTime} to tip meeting MC again.`
-            : '24 hours between meeting MC tipping.'
+            ? `until ${endTime} to tip the Jester again.`
+            : '24 hours between Jester tipping.'
         } `
       )
       .setColor('#ff3864')
@@ -98,7 +99,7 @@ export const tipXpMcInteraction = async (
     const embed = new EmbedBuilder()
       .setTitle('Not Enough Attendees')
       .setDescription(
-        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to tip meeting MC.`
+        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to tip the Jester.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -120,7 +121,7 @@ export const tipXpMcInteraction = async (
   if (recipientIds.length !== 1) {
     const embed = new EmbedBuilder()
       .setTitle('Invalid Recipient')
-      .setDescription(`You are only able to tip one recipient as meeting MC.`)
+      .setDescription(`You are only able to tip one recipient as Jester.`)
       .setColor('#ff3864')
       .setTimestamp();
 
@@ -209,11 +210,11 @@ export const tipXpMcInteraction = async (
 
   const newProposalExpiration = Date.now() + PROPOSAL_EXPIRATION_TIME;
   const embed = new EmbedBuilder()
-    .setTitle('🎙️ Meeting MC XP Tip Proposal')
+    .setTitle('<:jester:1222930129999626271> Jester Tip Proposal')
     .setDescription(
-      `<@${senderId}> is proposing to tip ${MC_XP_TIP_AMOUNT} XP to <@${
+      `<@${senderId}> is proposing to tip ${JESTER_TIP_AMOUNT} Jester XP to <@${
         meetingMcDiscordMembers[0]?.id
-      }> for MC'ing this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
+      }> for jestering this meeting.\n\nTo approve this tip, please react with an emoji. **${TIP_PROPOSAL_REACTION_THRESHOLD} emoji reactions from unique users are required for the tip to succeed**.\n\nThis proposal will expire at ${new Date(
         newProposalExpiration
       ).toLocaleString()}.`
     )
@@ -223,7 +224,7 @@ export const tipXpMcInteraction = async (
   const message = await interaction.followUp({
     embeds: [embed]
   });
-  await message.react('🎙️');
+  await message.react('1222930129999626271');
 
   await interaction.followUp({
     content: '@here ^^^'
@@ -236,7 +237,7 @@ export const tipXpMcInteraction = async (
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
     gameAddress,
-    chainId: '5',
+    chainId: CHAIN_ID,
     txHash: '',
     messageId: message.id,
     proposalExpiration: newProposalExpiration,

@@ -3,7 +3,7 @@ import { REST, Routes } from 'discord.js';
 import {
   queryCommand,
   // syncInvoiceDataCommand,
-  // tipXpAttendanceCommand,
+  tipJesterCommand,
   propsCommand
   // tipXpMcCommand
 } from '@/commands';
@@ -15,9 +15,9 @@ import {
 
 const commands = [
   propsCommand.toJSON(),
-  queryCommand.toJSON()
+  queryCommand.toJSON(),
   // syncInvoiceDataCommand.toJSON(),
-  // tipXpMcCommand.toJSON(),
+  tipJesterCommand.toJSON()
   // tipXpAttendanceCommand.toJSON()
 ];
 

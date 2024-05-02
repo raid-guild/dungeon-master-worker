@@ -41,12 +41,12 @@ export const propsInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('XP Tipping Cooldown')
+      .setTitle('Props Cooldown')
       .setDescription(
         `You must wait ${
           endTime
-            ? `until ${endTime} to tip again.`
-            : '24 hours between tipping.'
+            ? `until ${endTime} to give props again.`
+            : '24 hours between giving props.'
         } `
       )
       .setColor('#ff3864')
@@ -146,7 +146,7 @@ export const propsInteraction = async (
   const txHash = tx.hash;
 
   let embed = new EmbedBuilder()
-    .setTitle('XP Tipping Transaction Pending...')
+    .setTitle('Props XP Transaction Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -162,7 +162,7 @@ export const propsInteraction = async (
 
   if (!txReceipt.status) {
     embed = new EmbedBuilder()
-      .setTitle('XP Tipping Transaction Failed!')
+      .setTitle('Props XP Transaction Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
       .setDescription(
         `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -215,7 +215,7 @@ export const propsInteraction = async (
       : '';
 
   embed = new EmbedBuilder()
-    .setTitle('XP Tipping Succeeded!')
+    .setTitle('Props Succeeded!')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to the characters of ${discordIdsSuccessfullyTipped.map(
