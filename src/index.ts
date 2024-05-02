@@ -23,7 +23,7 @@ import {
   tipXpAttendanceInteraction,
   tipJesterInteraction
 } from '@/interactions';
-import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipXpMc';
+import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipJester';
 import { giveClassExp, getMcTipProposal, updateLatestXpMcTip } from '@/lib';
 import { McTipData } from '@/lib/dbHelpers';
 import { ClientWithCommands } from '@/types';

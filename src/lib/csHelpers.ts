@@ -21,7 +21,7 @@ import {
   XP_ADDRESS
 } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
-import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipXpMc';
+import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipJester';
 
 if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
   throw new Error(
