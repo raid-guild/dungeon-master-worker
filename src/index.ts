@@ -5,32 +5,31 @@ import {
   Events,
   GatewayIntentBits,
   Partials,
-  User
+  User,
+  MessageReaction
 } from 'discord.js';
 
 import {
+  propsCommand,
   queryCommand,
   syncInvoiceDataCommand,
-  tipXpAttendanceCommand,
-  tipXpCommand,
-  tipXpMcCommand
+  tipJesterCommand,
+  tipXpAttendanceCommand
 } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import {
+  propsInteraction,
   queryInteraction,
   syncInvoiceDataInteraction,
   tipXpAttendanceInteraction,
-  tipXpInteraction,
-  tipXpMcInteraction
+  tipJesterInteraction
 } from '@/interactions';
-import { MC_XP_TIP_AMOUNT } from '@/interactions/cs/tipXpMc';
-import { dropExp, getMcTipProposal, updateLatestXpMcTip } from '@/lib';
-import { McTipData } from '@/lib/dbHelpers';
+import { completeJesterTip } from '@/interactions';
+import { getMcTipProposal } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
   DISCORD_ALLOWED_PARENT_CHANNEL_IDS,
   DISCORD_DM_TOKEN,
-  EXPLORER_URL,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
@@ -46,11 +45,11 @@ export const setupDungeonMasterWorker = () => {
     partials: [Partials.Message, Partials.Reaction]
   });
   client.commands = new Collection();
+  client.commands.set(propsCommand.name, propsCommand);
   client.commands.set(queryCommand.name, queryCommand);
   client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
-  client.commands.set(tipXpCommand.name, tipXpCommand);
+  client.commands.set(tipJesterCommand.name, tipJesterCommand);
   client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
-  client.commands.set(tipXpMcCommand.name, tipXpMcCommand);
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -71,9 +70,9 @@ export const setupDungeonMasterWorker = () => {
     const channelId = interaction.channel?.id;
     const channel = interaction.guild?.channels.cache.get(channelId ?? '');
     const allowedAnywhereCommands = [
-      tipXpCommand.name,
-      tipXpAttendanceCommand.name,
-      tipXpMcCommand.name
+      propsCommand.name,
+      tipJesterCommand.name,
+      tipXpAttendanceCommand.name
     ];
 
     if (
@@ -97,14 +96,14 @@ export const setupDungeonMasterWorker = () => {
       case syncInvoiceDataCommand.name:
         await syncInvoiceDataInteraction(client, interaction);
         break;
-      case tipXpCommand.name:
-        await tipXpInteraction(client, interaction);
+      case propsCommand.name:
+        await propsInteraction(client, interaction);
+        break;
+      case tipJesterCommand.name:
+        await tipJesterInteraction(client, interaction);
         break;
       case tipXpAttendanceCommand.name:
         await tipXpAttendanceInteraction(client, interaction);
-        break;
-      case tipXpMcCommand.name:
-        await tipXpMcInteraction(client, interaction);
         break;
       default:
         await interaction.followUp({
@@ -150,9 +149,11 @@ export const setupDungeonMasterWorker = () => {
 
       if (Date.now() > proposalExpiration) {
         const embed = new EmbedBuilder()
-          .setTitle(':microphone2: MC XP Tipping Proposal Expired!')
+          .setTitle(
+            '<:jester:1222930129999626271> Jester Tipping Proposal Expired!'
+          )
           .setDescription(
-            `The XP tipping proposal has expired. Please create a new proposal.`
+            `The Jester XP tipping proposal has expired. Please create a new proposal.`
           )
           .setColor('#ff3864')
           .setTimestamp();
@@ -161,97 +162,9 @@ export const setupDungeonMasterWorker = () => {
         return;
       }
 
-      let embed = new EmbedBuilder()
-        .setTitle(':microphone2: MC XP Tipping Pending...')
-        .setColor('#ff3864')
-        .setTimestamp();
-
-      const txMessage = await reaction.message.channel.send({
-        embeds: [embed]
+      await completeJesterTip(client, mcTipProposal, {
+        reaction: reaction as MessageReaction
       });
-
-      let data: Omit<
-        McTipData,
-        'senderDiscordId' | 'gameAddress' | 'timestamp'
-      > & {
-        lastSenderDiscordId: string;
-        newSenderDiscordId: string;
-      } = {
-        lastSenderDiscordId: mcTipProposal.senderDiscordId,
-        newSenderDiscordId: mcTipProposal.senderDiscordId,
-        txHash: '',
-        tipPending: true
-      };
-      await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-
-      const tx = await dropExp(client, [receivingAddress], MC_XP_TIP_AMOUNT);
-      if (!tx) {
-        data = {
-          lastSenderDiscordId: mcTipProposal.senderDiscordId,
-          newSenderDiscordId: mcTipProposal.senderDiscordId,
-          txHash: '',
-          tipPending: false
-        };
-        await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-        return;
-      }
-
-      const txHash = tx.hash;
-
-      embed = new EmbedBuilder()
-        .setTitle(':microphone2: MC XP Tipping Transaction Pending...')
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-        .setDescription(
-          `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-        )
-        .setColor('#ff3864')
-        .setTimestamp();
-      await txMessage.edit({ embeds: [embed] });
-
-      const txReceipt = await tx.wait();
-
-      if (!txReceipt.status) {
-        data = {
-          lastSenderDiscordId: mcTipProposal.senderDiscordId,
-          newSenderDiscordId: mcTipProposal.senderDiscordId,
-          txHash,
-          tipPending: false
-        };
-        await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-
-        embed = new EmbedBuilder()
-          .setTitle(':microphone2: MC XP Tipping Transaction Failed!')
-          .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-          .setDescription(
-            `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
-          )
-          .setColor('#ff3864')
-          .setTimestamp();
-
-        await txMessage.edit({ embeds: [embed] });
-        return;
-      }
-
-      const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
-
-      embed = new EmbedBuilder()
-        .setTitle(':microphone2: MC XP Tipping Succeeded!')
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
-        .setDescription(
-          `<@${receivingDiscordId}>'s character received ${MC_XP_TIP_AMOUNT} XP for MC'ing this meeting.${viewGameMessage}`
-        )
-        .setColor('#ff3864')
-        .setTimestamp();
-
-      data = {
-        lastSenderDiscordId: mcTipProposal.senderDiscordId,
-        newSenderDiscordId: mcTipProposal.senderDiscordId,
-        txHash,
-        tipPending: false
-      };
-
-      await updateLatestXpMcTip(client, 'latestXpMcTips', data);
-      await txMessage.edit({ embeds: [embed] });
     } catch (error) {
       discordLogger(error, client);
     }

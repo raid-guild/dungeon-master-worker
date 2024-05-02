@@ -17,7 +17,7 @@ import {
   getInvoiceXpDistributions,
   // getIsInvoiceProviderRaidGuild,
   getRaidDataFromInvoiceAddresses,
-  giveClassXp,
+  giveClassExpWithDistro,
   rollCharacterSheets
 } from '@/lib';
 import { dbPromise } from '@/lib/mongodb';
@@ -401,7 +401,7 @@ export const syncInvoiceDataInteraction = async (
   );
 
   // 12) Give class XP to players
-  tx = await giveClassXp(client, newInvoiceXpDistroDocs);
+  tx = await giveClassExpWithDistro(client, newInvoiceXpDistroDocs);
 
   if (!tx) {
     await sendErrorEmbed(interaction);

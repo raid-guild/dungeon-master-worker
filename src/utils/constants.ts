@@ -8,6 +8,8 @@ export const DISCORD_DM_CLIENT_ID = process.env.DISCORD_DM_CLIENT_ID ?? '';
 export const DISCORD_GUARD_CLIENT_ID =
   process.env.DISCORD_GUARD_CLIENT_ID ?? '';
 export const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID ?? '';
+export const DISCORD_SYNC_STEWARD_ID =
+  process.env.DISCORD_SYNC_STEWARD_ID ?? '';
 export const DISCORD_COMMAND_CENTER_ID =
   process.env.DISCORD_COMMAND_CENTER_ID ?? '';
 export const DISCORD_START_HERE_CHANNEL_ID =
