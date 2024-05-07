@@ -19,7 +19,7 @@ import { ClientWithCommands } from '@/types';
 import { EXPLORER_URL, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-export const tipXpAttendanceInteraction = async (
+export const recordAttendanceInteraction = async (
   client: ClientWithCommands,
   interaction:
     | ChatInputCommandInteraction
