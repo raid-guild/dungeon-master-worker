@@ -12,8 +12,10 @@ import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 import { uploadToPinata } from '@/lib/pinata';
 import { ClientWithCommands, InvoiceXpDistroDocument } from '@/types';
 import {
+  ATTENDANCE_BADGE_ID,
   CHARACTER_SHEETS_SUBGRAPH_URL,
   CLASS_ADDRESS,
+  ITEMS_ADDRESS,
   NPC_SAFE_ADDRESS,
   NPC_SAFE_OWNER_KEY,
   RAIDGUILD_GAME_ADDRESS,
@@ -170,6 +172,61 @@ export const dropExp = async (
   const safeTransactionData = accountAddresses.map(accountAddress => {
     return buildDropExpTransactionData(accountAddress, amount);
   });
+
+  try {
+    const safeTx = await safe.createTransaction({
+      safeTransactionData
+    });
+
+    const txRes = await safe.executeTransaction(safeTx);
+    const tx = txRes.transactionResponse;
+
+    if (!tx) throw new Error('Could not submit transaction');
+
+    return tx;
+  } catch (err) {
+    discordLogger(JSON.stringify(err), client);
+    return null;
+  }
+};
+
+const buildDropLootTransactionData = (
+  accountAddresses: Address[],
+  itemIds: bigint[][],
+  amounts: bigint[][]
+) => {
+  const abi = parseAbi([
+    'function dropLoot(address[] calldata characters, uint256[][] calldata itemIds, uint256[][] calldata amounts) external'
+  ]);
+
+  const data = encodeFunctionData({
+    abi,
+    functionName: 'dropLoot',
+    args: [accountAddresses, itemIds, amounts]
+  });
+
+  const dropExpTransactionData: SafeTransactionDataPartial = {
+    to: ITEMS_ADDRESS,
+    data,
+    value: '0'
+  };
+
+  return dropExpTransactionData;
+};
+
+export const dropAttendanceBadges = async (
+  client: ClientWithCommands,
+  accountAddresses: Address[]
+) => {
+  const safe = await getNpcGnosisSafe();
+  const itemIds = accountAddresses.map(() => [BigInt(ATTENDANCE_BADGE_ID)]);
+  const amounts = accountAddresses.map(() => [BigInt(1)]);
+
+  const safeTransactionData = buildDropLootTransactionData(
+    accountAddresses,
+    itemIds,
+    amounts
+  );
 
   try {
     const safeTx = await safe.createTransaction({
