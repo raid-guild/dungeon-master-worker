@@ -12,17 +12,17 @@ import {
 import {
   propsCommand,
   queryCommand,
+  recordAttendanceCommand,
   syncInvoiceDataCommand,
   tipJesterCommand,
-  tipScribeCommand,
-  tipXpAttendanceCommand
+  tipScribeCommand
 } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import {
   propsInteraction,
   queryInteraction,
   syncInvoiceDataInteraction,
-  tipXpAttendanceInteraction,
+  recordAttendanceInteraction,
   tipJesterInteraction,
   tipScribeInteraction
 } from '@/interactions';
@@ -49,10 +49,10 @@ export const setupDungeonMasterWorker = () => {
   client.commands = new Collection();
   client.commands.set(propsCommand.name, propsCommand);
   client.commands.set(queryCommand.name, queryCommand);
+  client.commands.set(recordAttendanceCommand.name, recordAttendanceCommand);
   client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
   client.commands.set(tipJesterCommand.name, tipJesterCommand);
   client.commands.set(tipScribeCommand.name, tipScribeCommand);
-  client.commands.set(tipXpAttendanceCommand.name, tipXpAttendanceCommand);
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -74,9 +74,9 @@ export const setupDungeonMasterWorker = () => {
     const channel = interaction.guild?.channels.cache.get(channelId ?? '');
     const allowedAnywhereCommands = [
       propsCommand.name,
+      recordAttendanceCommand.name,
       tipJesterCommand.name,
-      tipScribeCommand.name,
-      tipXpAttendanceCommand.name
+      tipScribeCommand.name
     ];
 
     if (
@@ -103,14 +103,14 @@ export const setupDungeonMasterWorker = () => {
       case propsCommand.name:
         await propsInteraction(client, interaction);
         break;
+      case recordAttendanceCommand.name:
+        await recordAttendanceInteraction(client, interaction);
+        break;
       case tipJesterCommand.name:
         await tipJesterInteraction(client, interaction);
         break;
       case tipScribeCommand.name:
         await tipScribeInteraction(client, interaction);
-        break;
-      case tipXpAttendanceCommand.name:
-        await tipXpAttendanceInteraction(client, interaction);
         break;
       default:
         await interaction.followUp({

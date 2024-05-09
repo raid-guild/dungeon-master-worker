@@ -18,10 +18,10 @@ export const propsCommand = new SlashCommandBuilder()
       .setRequired(false)
   );
 
-export const tipXpAttendanceCommand = new SlashCommandBuilder()
-  .setName('tip-xp-attendance')
+export const recordAttendanceCommand = new SlashCommandBuilder()
+  .setName('record-attendance')
   .setDescription(
-    'Gives the characters of everyone in this voice channel 20 XP'
+    'Gives the characters of everyone in this voice channel an attendance badge'
   );
 
 export const tipJesterCommand = new SlashCommandBuilder()
