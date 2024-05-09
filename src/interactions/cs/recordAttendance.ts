@@ -6,11 +6,11 @@ import {
   UserContextMenuCommandInteraction,
   VoiceBasedChannel
 } from 'discord.js';
-import { getAddress } from 'viem';
+import { Address, getAddress } from 'viem';
 
 import {
   checkUserNeedsCooldown,
-  dropExp,
+  dropAttendanceBadges,
   getCharacterAccountsByPlayerAddresses,
   getPlayerAddressesByDiscordTags,
   updateLatestXpTip
@@ -26,8 +26,7 @@ export const recordAttendanceInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  const TIP_AMOUNT = '20';
-  const TABLE_NAME = 'latestAttendanceXpTips';
+  const TABLE_NAME = 'latestAttendanceRecord';
   const MINIMUM_ATTENDEES = 6;
 
   if (!EXPLORER_URL) {
@@ -41,12 +40,12 @@ export const recordAttendanceInteraction = async (
 
   if (needsCooldown) {
     const embed = new EmbedBuilder()
-      .setTitle('Attendance XP Tipping Cooldown')
+      .setTitle('Attendance Recording Cooldown')
       .setDescription(
         `All members must wait ${
           endTime
-            ? `until ${endTime} to tip attendance again.`
-            : '24 hours between attendance tipping.'
+            ? `until ${endTime} to record attendance again.`
+            : '24 hours between attendance recording.'
         } `
       )
       .setColor('#ff3864')
@@ -63,6 +62,19 @@ export const recordAttendanceInteraction = async (
   const voiceChannel = interaction.guild?.channels.cache.get(
     channelId ?? ''
   ) as VoiceBasedChannel;
+  if (!voiceChannel.isVoiceBased()) {
+    const embed = new EmbedBuilder()
+      .setTitle('Not a Voice Channel')
+      .setDescription(`You must be in a voice channel to record attendance.`)
+      .setColor('#ff3864')
+      .setTimestamp();
+
+    await interaction.followUp({
+      embeds: [embed]
+    });
+    return;
+  }
+
   const { members } = voiceChannel;
   const discordMembers = members.map(m => m);
 
@@ -70,7 +82,7 @@ export const recordAttendanceInteraction = async (
     const embed = new EmbedBuilder()
       .setTitle('Not Enough Attendees')
       .setDescription(
-        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to tip attendance.`
+        `There must be at least ${MINIMUM_ATTENDEES} attendees in the voice channel to record attendance.`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -143,13 +155,13 @@ export const recordAttendanceInteraction = async (
     return;
   }
 
-  const tx = await dropExp(client, accountAddresses, TIP_AMOUNT);
+  const tx = await dropAttendanceBadges(client, accountAddresses as Address[]);
   if (!tx) return;
 
   const txHash = tx.hash;
 
   let embed = new EmbedBuilder()
-    .setTitle('Attendance XP Tipping Tx Pending...')
+    .setTitle('Attendance Recording Tx Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
       `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -165,7 +177,7 @@ export const recordAttendanceInteraction = async (
 
   if (!txReceipt.status) {
     embed = new EmbedBuilder()
-      .setTitle('Attendance XP Tipping Tx Failed!')
+      .setTitle('Attendance Recording Tx Failed!')
       .setURL(`${EXPLORER_URL}/tx/${txHash}`)
       .setDescription(
         `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
@@ -191,12 +203,12 @@ export const recordAttendanceInteraction = async (
   );
 
   embed = new EmbedBuilder()
-    .setTitle('Attendance XP Tipping Succeeded!')
+    .setTitle('Attendance Recording Succeeded!')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
-      `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to all characters in this voice channel:\n${discordIdsSuccessfullyTipped.map(
+      `**<@${senderId}>** gave an attendance badge to all characters in this voice channel:\n${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
-      )}.${viewGameMessage}\n---\nIf you did not receive a tip, you are either not a member of RaidGuild, not in DungeonMaster, or not in CharacterSheets.`
+      )}.${viewGameMessage}\n---\nIf you did not receive a badge, you are either not a member of RaidGuild, not in DungeonMaster, or not in CharacterSheets.`
     )
     .setColor('#ff3864')
     .setTimestamp();
