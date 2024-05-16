@@ -140,12 +140,19 @@ export const propsInteraction = async (
     return;
   }
 
+  let embed = new EmbedBuilder()
+    .setTitle('Props Pending...')
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.followUp({ embeds: [embed] });
+
   const tx = await dropExp(client, accountAddresses, TIP_AMOUNT);
   if (!tx) return;
 
   const txHash = tx.hash;
 
-  let embed = new EmbedBuilder()
+  embed = new EmbedBuilder()
     .setTitle('Props XP Transaction Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
@@ -154,7 +161,7 @@ export const propsInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
-  await interaction.followUp({
+  await interaction.editReply({
     embeds: [embed]
   });
 

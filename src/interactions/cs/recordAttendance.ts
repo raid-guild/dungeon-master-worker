@@ -155,12 +155,19 @@ export const recordAttendanceInteraction = async (
     return;
   }
 
+  let embed = new EmbedBuilder()
+    .setTitle('Recording Attendance...')
+    .setColor('#ff3864')
+    .setTimestamp();
+
+  await interaction.followUp({ embeds: [embed] });
+
   const tx = await dropAttendanceBadges(client, accountAddresses as Address[]);
   if (!tx) return;
 
   const txHash = tx.hash;
 
-  let embed = new EmbedBuilder()
+  embed = new EmbedBuilder()
     .setTitle('Attendance Recording Tx Pending...')
     .setURL(`${EXPLORER_URL}/tx/${txHash}`)
     .setDescription(
@@ -169,7 +176,7 @@ export const recordAttendanceInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
-  await interaction.followUp({
+  await interaction.editReply({
     embeds: [embed]
   });
 
