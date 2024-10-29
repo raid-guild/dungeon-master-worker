@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 import { getAddress } from 'viem';
 
+import { completeJesterTip } from '@/interactions/cs/tipJester/completeJesterTip';
 import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
@@ -18,14 +19,13 @@ import { ClientWithCommands } from '@/types';
 import {
   CHAIN_ID,
   EXPLORER_URL,
+  JESTER_TABLE_NAME,
+  JESTER_TIP_AMOUNT,
   RAIDGUILD_GAME_ADDRESS,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import { completeJesterTip } from './completeJesterTip';
 
-export const JESTER_TIP_AMOUNT = '50';
-export const TABLE_NAME = 'latestJesterTips';
 const MINIMUM_ATTENDEES = 6;
 const PROPOSAL_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -48,7 +48,7 @@ export const tipJesterInteraction = async (
     needsCooldown,
     proposalActive,
     proposalExpiration
-  } = await checkUserNeedsCooldown(client, TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, JESTER_TABLE_NAME);
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
@@ -240,7 +240,7 @@ export const tipJesterInteraction = async (
   const isSyncSteward = senderId === process.env.DISCORD_SYNC_STEWARD_ID;
 
   if (isSyncSteward && interaction.channel) {
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, jesterTipData);
     await completeJesterTip(
       client,
       {
@@ -274,6 +274,6 @@ export const tipJesterInteraction = async (
     await interaction.followUp({
       content: '@here ^^^'
     });
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, jesterTipData);
   }
 };

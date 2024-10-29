@@ -12,8 +12,8 @@ import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
   getPlayerAddressesByDiscordTags,
-  updateLatestXpMcTip,
-  giveClassExp
+  giveClassExp,
+  updateLatestXpMcTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {

@@ -1,12 +1,12 @@
 import { REST, Routes } from 'discord.js';
 
 import {
+  propsCommand,
   queryCommand,
   recordAttendanceCommand,
   // syncInvoiceDataCommand,
   tipJesterCommand,
-  tipScribeCommand,
-  propsCommand
+  tipScribeCommand
 } from '@/commands';
 import {
   DISCORD_DM_CLIENT_ID,

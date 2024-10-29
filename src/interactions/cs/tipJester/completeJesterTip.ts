@@ -1,14 +1,17 @@
 import {
-  EmbedBuilder,
   ChatInputCommandInteraction,
+  EmbedBuilder,
   MessageReaction
 } from 'discord.js';
 
-import { JESTER_TIP_AMOUNT, TABLE_NAME } from '@/interactions/cs/tipJester';
 import { giveClassExp, updateLatestXpMcTip } from '@/lib';
 import { JesterTipData } from '@/lib/dbHelpers';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import {
+  EXPLORER_URL,
+  JESTER_TABLE_NAME,
+  JESTER_TIP_AMOUNT
+} from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const completeJesterTip = async (
@@ -54,7 +57,7 @@ export const completeJesterTip = async (
       txHash: '',
       tipPending: true
     };
-    await updateLatestXpMcTip(client, TABLE_NAME, data);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
     const tx = await giveClassExp(client, receivingAddress, '14');
     if (!tx) {
@@ -64,7 +67,7 @@ export const completeJesterTip = async (
         txHash: '',
         tipPending: false
       };
-      await updateLatestXpMcTip(client, TABLE_NAME, data);
+      await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
       return;
     }
 
@@ -96,7 +99,7 @@ export const completeJesterTip = async (
         txHash,
         tipPending: false
       };
-      await updateLatestXpMcTip(client, TABLE_NAME, data);
+      await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
       embed = new EmbedBuilder()
         .setTitle(
@@ -135,7 +138,7 @@ export const completeJesterTip = async (
       tipPending: false
     };
 
-    await updateLatestXpMcTip(client, TABLE_NAME, data);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
     if (proposalMessage) {
       await proposalMessage.edit({ embeds: [embed] });

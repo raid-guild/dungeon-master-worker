@@ -68,3 +68,6 @@ export const TIP_PROPOSAL_REACTION_THRESHOLD = process.env
 
 export const WXDAI_CONTRACT_ADDRESS =
   '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d';
+
+export const JESTER_TIP_AMOUNT = '50';
+export const JESTER_TABLE_NAME = 'latestJesterTips';

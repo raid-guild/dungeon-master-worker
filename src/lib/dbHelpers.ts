@@ -7,9 +7,12 @@ import {
   InvoiceXpDistroDocument,
   TRANSACTION_STATUS
 } from '@/types';
-import { COOLDOWN_TIME, RAIDGUILD_GAME_ADDRESS } from '@/utils/constants';
+import {
+  COOLDOWN_TIME,
+  JESTER_TABLE_NAME,
+  RAIDGUILD_GAME_ADDRESS
+} from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import { TABLE_NAME } from '@/interactions';
 
 export const checkUserNeedsCooldown = async (
   client: ClientWithCommands,
@@ -242,7 +245,7 @@ export const getMcTipProposal = async (
     const gameAddress = getAddress(RAIDGUILD_GAME_ADDRESS);
     const dbClient = await dbPromise;
     const result = await dbClient
-      .collection(TABLE_NAME)
+      .collection(JESTER_TABLE_NAME)
       .findOne({ gameAddress });
     if (!result) {
       return null;
