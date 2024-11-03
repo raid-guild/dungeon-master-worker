@@ -8,6 +8,8 @@ import {
 } from 'discord.js';
 import { getAddress } from 'viem';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
+import { completeJesterTip } from '@/interactions/cs/tipJester/completeJesterTip';
 import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
@@ -16,16 +18,13 @@ import {
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
-  CHAIN_ID,
-  EXPLORER_URL,
-  RAIDGUILD_GAME_ADDRESS,
+  ENVIRONMENT,
+  JESTER_TABLE_NAME,
+  JESTER_TIP_AMOUNT,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import { completeJesterTip } from './completeJesterTip';
 
-export const JESTER_TIP_AMOUNT = '50';
-export const TABLE_NAME = 'latestJesterTips';
 const MINIMUM_ATTENDEES = 6;
 const PROPOSAL_EXPIRATION_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -36,8 +35,8 @@ export const tipJesterInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  if (!EXPLORER_URL) {
-    discordLogger('Missing EXPLORER_URL env', client);
+  if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl) {
+    discordLogger('Missing explorerUrl config variable', client);
     return;
   }
 
@@ -48,7 +47,7 @@ export const tipJesterInteraction = async (
     needsCooldown,
     proposalActive,
     proposalExpiration
-  } = await checkUserNeedsCooldown(client, TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, JESTER_TABLE_NAME, 'main');
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
@@ -169,8 +168,8 @@ export const tipJesterInteraction = async (
   );
 
   if (
-    !senderTagToEthAddressMap ||
-    !senderTagToEthAddressMap[interaction.user.tag]
+    !senderTagToEthAddressMap?.main ||
+    !senderTagToEthAddressMap.main[interaction.user.tag]
   ) {
     const embed = new EmbedBuilder()
       .setTitle('Not a Member')
@@ -192,14 +191,16 @@ export const tipJesterInteraction = async (
     meetingMcDiscordMembers as GuildMember[]
   );
 
-  if (!discordTagToEthAddressMap) return;
-  const playerAddresses = Object.values(discordTagToEthAddressMap);
+  if (!discordTagToEthAddressMap?.main) return;
+  const playerAddresses = Object.values(discordTagToEthAddressMap.main);
   if (!playerAddresses) return;
 
   const [discordTagToCharacterAccountMap] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap,
+      discordTagToEthAddressMap.main,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl,
       interaction
     );
   if (!discordTagToCharacterAccountMap) return;
@@ -227,8 +228,10 @@ export const tipJesterInteraction = async (
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    gameAddress: getAddress(RAIDGUILD_GAME_ADDRESS),
-    chainId: CHAIN_ID,
+    gameAddress: getAddress(
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+    ),
+    chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
     txHash: '',
     messageId: '',
     proposalExpiration: newProposalExpiration,
@@ -240,7 +243,7 @@ export const tipJesterInteraction = async (
   const isSyncSteward = senderId === process.env.DISCORD_SYNC_STEWARD_ID;
 
   if (isSyncSteward && interaction.channel) {
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, jesterTipData);
     await completeJesterTip(
       client,
       {
@@ -274,6 +277,6 @@ export const tipJesterInteraction = async (
     await interaction.followUp({
       content: '@here ^^^'
     });
-    await updateLatestXpMcTip(client, TABLE_NAME, jesterTipData);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, jesterTipData);
   }
 };

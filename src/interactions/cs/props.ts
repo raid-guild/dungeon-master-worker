@@ -6,6 +6,7 @@ import {
   UserContextMenuCommandInteraction
 } from 'discord.js';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   checkUserNeedsCooldown,
   dropExp,
@@ -14,7 +15,7 @@ import {
   updateLatestXpTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import { CHAIN_ID, EXPLORER_URL } from '@/utils/constants';
+import { ENVIRONMENT } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 const TIP_AMOUNT = '10';
@@ -27,8 +28,8 @@ export const propsInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  if (!EXPLORER_URL) {
-    discordLogger('Missing EXPLORER_URL env', client);
+  if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl) {
+    discordLogger('Missing explorerUrl config variable', client);
     return;
   }
 
@@ -36,6 +37,7 @@ export const propsInteraction = async (
   const { needsCooldown, endTime } = await checkUserNeedsCooldown(
     client,
     TABLE_NAME,
+    'main',
     senderId
   );
 
@@ -86,8 +88,8 @@ export const propsInteraction = async (
   );
 
   if (
-    !senderTagToEthAddressMap ||
-    !senderTagToEthAddressMap[interaction.user.tag]
+    !senderTagToEthAddressMap?.main ||
+    !senderTagToEthAddressMap.main[interaction.user.tag]
   ) {
     const embed = new EmbedBuilder()
       .setTitle('Not a Member')
@@ -110,14 +112,16 @@ export const propsInteraction = async (
       discordMembers as GuildMember[]
     );
 
-  if (!discordTagToEthAddressMap) return;
-  const playerAddresses = Object.values(discordTagToEthAddressMap);
+  if (!discordTagToEthAddressMap?.main) return;
+  const playerAddresses = Object.values(discordTagToEthAddressMap.main);
   if (!playerAddresses) return;
 
   const [discordTagToCharacterAccountMap, discordTagsWithoutCharacterAccounts] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap,
+      discordTagToEthAddressMap.main,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl,
       interaction
     );
   if (!discordTagToCharacterAccountMap) return;
@@ -154,9 +158,11 @@ export const propsInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('Props XP Transaction Pending...')
-    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setURL(
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setDescription(
-      `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      `Transaction is pending. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -170,9 +176,11 @@ export const propsInteraction = async (
   if (!txReceipt.status) {
     embed = new EmbedBuilder()
       .setTitle('Props XP Transaction Failed!')
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
-        `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -186,14 +194,14 @@ export const propsInteraction = async (
   const discordMembersSuccessfullyTipped = discordMembers.filter(
     m =>
       !discordTagsWithoutCharacterAccounts?.includes(m?.user.tag as string) &&
-      !discordTagsWithoutEthAddress?.includes(m?.user.tag as string)
+      !discordTagsWithoutEthAddress?.main.includes(m?.user.tag as string)
   );
   const discordIdsSuccessfullyTipped = discordMembersSuccessfullyTipped.map(
     m => m?.user.id
   );
 
   const discordMembersNotInDm = discordMembers.filter(m =>
-    discordTagsWithoutEthAddress?.includes(m?.user.tag as string)
+    discordTagsWithoutEthAddress?.main.includes(m?.user.tag as string)
   );
   const discordIdsNotInDm = discordMembersNotInDm.map(m => m?.user.id);
 
@@ -223,7 +231,9 @@ export const propsInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('Props Succeeded!')
-    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setURL(
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setDescription(
       `**<@${senderId}>** tipped ${TIP_AMOUNT} XP to the characters of ${discordIdsSuccessfullyTipped.map(
         id => `<@${id}>`
@@ -233,15 +243,16 @@ export const propsInteraction = async (
     .setTimestamp();
 
   const data = {
+    channelId: interaction.channelId,
     lastSenderDiscordId: senderId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    chainId: CHAIN_ID,
+    chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
     txHash,
     message
   };
 
-  await updateLatestXpTip(client, TABLE_NAME, data);
+  await updateLatestXpTip(client, TABLE_NAME, 'main', data);
 
   await interaction.editReply({
     embeds: [embed]

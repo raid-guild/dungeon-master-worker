@@ -8,6 +8,7 @@ import {
 import { createPublicClient, http } from 'viem';
 import { gnosis, sepolia } from 'viem/chains';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   formatInvoiceXpDistributionDocuments,
   getAllInvoicesWithPrimarySplit,
@@ -26,7 +27,7 @@ import {
   InvoiceWithSplits,
   TRANSACTION_STATUS
 } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import { ENVIRONMENT } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 // const TEMP_INVOICE_ADDRESS = '0xe7645f30f48767d9d503a79870a6239b952e5176';
@@ -175,7 +176,7 @@ export const syncInvoiceDataInteraction = async (
           const { transactionHash } = distro;
 
           const publicViemClient = createPublicClient({
-            chain: getChain(distro.chainId),
+            chain: getChain(distro.chainId.toString()),
             transport: http()
           });
 
@@ -300,7 +301,9 @@ export const syncInvoiceDataInteraction = async (
   const [discordTagToCharacterAccountMap1] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap
+      discordTagToEthAddressMap,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl
     );
 
   if (!discordTagToCharacterAccountMap1) {
@@ -327,9 +330,11 @@ export const syncInvoiceDataInteraction = async (
 
     embed = new EmbedBuilder()
       .setTitle('Character Creation Transaction Pending...')
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
-        `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `Transaction is pending. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -343,9 +348,11 @@ export const syncInvoiceDataInteraction = async (
     if (!txReceipt.status) {
       embed = new EmbedBuilder()
         .setTitle('Character Creation Transaction Failed!')
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+        .setURL(
+          `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+        )
         .setDescription(
-          `Transaction failed. View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+          `Transaction failed. View the transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
         )
         .setColor('#ff3864')
         .setTimestamp();
@@ -360,7 +367,7 @@ export const syncInvoiceDataInteraction = async (
     embed = new EmbedBuilder()
       .setTitle('New Characters Created! Invoices Still Syncing...')
       .setDescription(
-        `View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `View the transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -374,7 +381,9 @@ export const syncInvoiceDataInteraction = async (
   const [discordTagToCharacterAccountMap2] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap
+      discordTagToEthAddressMap,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl
     );
 
   if (!discordTagToCharacterAccountMap2) {
@@ -419,9 +428,11 @@ export const syncInvoiceDataInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('Class XP Transaction Pending...')
-    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setURL(
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setDescription(
-      `Transaction is pending. View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      `Transaction is pending. View the transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -452,9 +463,11 @@ export const syncInvoiceDataInteraction = async (
 
     embed = new EmbedBuilder()
       .setTitle('Class XP Transaction Failed!')
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
-        `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -472,7 +485,9 @@ export const syncInvoiceDataInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('Class XP Given! Invoices Still Syncing...')
-    .setDescription(`View the transaction here:\n${EXPLORER_URL}/tx/${txHash}`)
+    .setDescription(
+      `View the transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setColor('#ff3864')
     .setTimestamp();
 

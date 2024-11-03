@@ -8,6 +8,8 @@ import {
 
 import { ClientWithCommands, InvoiceXpDistroDocument } from '@/types';
 import {
+  GOOGLE_SHEETS_API_KEY,
+  GOOGLE_SHEETS_PROJECT_ID,
   HASURA_GRAPHQL_ADMIN_SECRET,
   HASURA_GRAPHQL_ENDPOINT
 } from '@/utils/constants';
@@ -19,6 +21,12 @@ if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
   );
 }
 
+if (!GOOGLE_SHEETS_API_KEY || !GOOGLE_SHEETS_PROJECT_ID) {
+  throw new Error(
+    'Missing envs GOOGLE_SHEETS_API_KEY or GOOGLE_SHEETS_PROJECT_ID'
+  );
+}
+
 export const getPlayerAddressesByDiscordTags = async (
   client: ClientWithCommands,
   interaction:
@@ -26,7 +34,12 @@ export const getPlayerAddressesByDiscordTags = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction,
   discordMembers: GuildMember[]
-): Promise<[Record<string, string> | null, string[] | null]> => {
+): Promise<
+  [
+    Record<'main' | 'cohort7', Record<string, string>> | null,
+    Record<'main' | 'cohort7', string[]> | null
+  ]
+> => {
   try {
     const discordUsernames = discordMembers.map(m => m?.user.tag);
     const query = `
@@ -61,22 +74,55 @@ export const getPlayerAddressesByDiscordTags = async (
 
     const { members } = response.data.data;
 
-    const discordTagToEthAddressMap = members.reduce(
+    const discordTagToEthAddressMap: Record<
+      'main' | 'cohort7',
+      Record<string, string>
+    > = members.reduce(
       (
-        acc: Record<string, string>,
+        acc: Record<'main' | 'cohort7', Record<string, string>>,
         member: { eth_address: string; contact_info: { discord: string } }
       ) => {
         const { discord } = member.contact_info;
         const { eth_address: ethAddress } = member;
-        acc[discord] = ethAddress;
+        acc.main[discord] = ethAddress.toLowerCase();
         return acc;
       },
-      {}
+      { main: {}, cohort7: {} }
     );
 
-    const discordTagsWithoutEthAddress = discordUsernames.filter(
-      discordTag => !discordTagToEthAddressMap[discordTag]
-    );
+    const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_PROJECT_ID}/values/Cohort%20Game%20Players?alt=json&key=${GOOGLE_SHEETS_API_KEY}`;
+
+    const cohortMappingResponse = await axios.get(apiUrl);
+    const cohortMappingValues = cohortMappingResponse.data as {
+      values: [string, string, string][];
+    };
+
+    discordUsernames.forEach(discordTag => {
+      const cohortMappingEntry = cohortMappingValues.values.find(
+        entry => entry[0] === discordTag
+      );
+      const [, ethAddress] = cohortMappingEntry || [];
+      if (ethAddress) {
+        discordTagToEthAddressMap.cohort7[discordTag] =
+          ethAddress.toLowerCase();
+      }
+    });
+
+    const discordTagsWithoutEthAddress: Record<'main' | 'cohort7', string[]> =
+      discordUsernames.reduce(
+        (acc: Record<'main' | 'cohort7', string[]>, discordTag: string) => {
+          if (!discordTagToEthAddressMap.main[discordTag]) {
+            acc.main.push(discordTag);
+          }
+
+          if (!discordTagToEthAddressMap.cohort7[discordTag]) {
+            acc.cohort7.push(discordTag);
+          }
+
+          return acc;
+        },
+        { main: [], cohort7: [] }
+      );
 
     return [discordTagToEthAddressMap, discordTagsWithoutEthAddress];
   } catch (err) {
