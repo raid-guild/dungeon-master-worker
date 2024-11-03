@@ -37,6 +37,7 @@ export const propsInteraction = async (
   const { needsCooldown, endTime } = await checkUserNeedsCooldown(
     client,
     TABLE_NAME,
+    'main',
     senderId
   );
 
@@ -242,6 +243,7 @@ export const propsInteraction = async (
     .setTimestamp();
 
   const data = {
+    channelId: interaction.channelId,
     lastSenderDiscordId: senderId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
@@ -250,7 +252,7 @@ export const propsInteraction = async (
     message
   };
 
-  await updateLatestXpTip(client, TABLE_NAME, data);
+  await updateLatestXpTip(client, TABLE_NAME, 'main', data);
 
   await interaction.editReply({
     embeds: [embed]

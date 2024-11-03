@@ -58,7 +58,7 @@ export const tipScribeInteraction = async (
     needsCooldown,
     proposalActive,
     proposalExpiration
-  } = await checkUserNeedsCooldown(client, TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, TABLE_NAME, 'main');
 
   if (proposalActive) {
     const embed = new EmbedBuilder()

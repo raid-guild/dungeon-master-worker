@@ -38,9 +38,10 @@ export const recordAttendanceInteraction = async (
   }
 
   const channelId = interaction.channel?.id;
+  if (!channelId) return;
 
   const voiceChannel = interaction.guild?.channels.cache.get(
-    channelId ?? ''
+    channelId
   ) as VoiceBasedChannel;
   if (!voiceChannel.isVoiceBased()) {
     embed = new EmbedBuilder()
@@ -56,12 +57,28 @@ export const recordAttendanceInteraction = async (
   }
 
   const senderId = interaction.user.id;
-  const {
+  let {
     channelId: lastChannelId,
     endTime,
     lastSenderDiscordId,
     needsCooldown
-  } = await checkUserNeedsCooldown(client, TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, TABLE_NAME, 'main');
+
+  if (!needsCooldown) {
+    const {
+      channelId: lastCohortChannelId,
+      endTime: cohortEndTime,
+      lastSenderDiscordId: lastCohortSenderDiscordId,
+      needsCooldown: cohortNeedsCooldown
+    } = await checkUserNeedsCooldown(client, TABLE_NAME, 'cohort7');
+
+    if (cohortNeedsCooldown) {
+      needsCooldown = cohortNeedsCooldown;
+      endTime = cohortEndTime;
+      lastChannelId = lastCohortChannelId;
+      lastSenderDiscordId = lastCohortSenderDiscordId;
+    }
+  }
 
   if (needsCooldown && lastChannelId === channelId) {
     embed = new EmbedBuilder()
@@ -141,8 +158,8 @@ export const recordAttendanceInteraction = async (
   );
 
   const [
-    discordTagToCohortCharacterAccountMap
-    // discordTagsWithoutCohortCharacterAccounts
+    discordTagToCohortCharacterAccountMap,
+    discordTagsWithoutCohortCharacterAccounts
   ] = await getCharacterAccountsByPlayerAddresses(
     client,
     discordTagToEthAddressMap.cohort7,
@@ -189,22 +206,44 @@ export const recordAttendanceInteraction = async (
 
   await interaction.followUp({ embeds: [embed] });
 
-  const tx = await dropAttendanceBadges(
-    client,
-    mainAccountAddresses as Address[]
-  );
-  if (!tx) return;
+  let mainTx = null;
+  let cohort7Tx = null;
 
-  const txHash = tx.hash;
+  if (mainAccountAddresses.length > 0) {
+    mainTx = await dropAttendanceBadges(
+      client,
+      'main',
+      mainAccountAddresses as Address[]
+    );
+  }
+
+  if (cohortAccountAddresses.length > 0) {
+    cohort7Tx = await dropAttendanceBadges(
+      client,
+      'cohort7',
+      cohortAccountAddresses as Address[]
+    );
+  }
+
+  let url = '';
+  let description = '';
+
+  if (mainTx && cohort7Tx) {
+    url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`;
+    const cohort7Url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`;
+    description = `Transactions are pending.\n\nView the main game transaction here: ${url}\n\nView the cohort7 game transaction here: ${cohort7Url}`;
+  } else if (mainTx) {
+    url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`;
+    description = `Transaction is pending.\n\nView the main game transaction here: ${url}`;
+  } else if (cohort7Tx) {
+    url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`;
+    description = `Transaction is pending.\n\nView the cohort7 game transaction here: ${url}`;
+  }
 
   embed = new EmbedBuilder()
     .setTitle('Attendance Recording Tx Pending...')
-    .setURL(
-      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
-    )
-    .setDescription(
-      `Transaction is pending. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
-    )
+    .setURL(url)
+    .setDescription(description)
     .setColor('#ff3864')
     .setTimestamp();
 
@@ -212,33 +251,64 @@ export const recordAttendanceInteraction = async (
     embeds: [embed]
   });
 
-  const txReceipt = await tx.wait();
+  if (mainTx) {
+    const txReceipt = await mainTx.wait();
 
-  if (!txReceipt.status) {
-    embed = new EmbedBuilder()
-      .setTitle('Attendance Recording Tx Failed!')
-      .setURL(
-        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
-      )
-      .setDescription(
-        `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
-      )
-      .setColor('#ff3864')
-      .setTimestamp();
+    if (!txReceipt.status) {
+      embed = new EmbedBuilder()
+        .setTitle('Main Attendance Recording Tx Failed!')
+        .setURL(
+          `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`
+        )
+        .setDescription(
+          `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`
+        )
+        .setColor('#ff3864')
+        .setTimestamp();
 
-    await interaction.editReply({
-      embeds: [embed]
-    });
-    return;
+      await interaction.editReply({
+        embeds: [embed]
+      });
+      return;
+    }
   }
 
-  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org`;
+  if (cohort7Tx) {
+    const txReceipt = await cohort7Tx.wait();
+
+    if (!txReceipt.status) {
+      embed = new EmbedBuilder()
+        .setTitle('Cohort7 Attendance Recording Tx Failed!')
+        .setURL(
+          `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`
+        )
+        .setDescription(
+          `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`
+        )
+        .setColor('#ff3864')
+        .setTimestamp();
+
+      await interaction.editReply({
+        embeds: [embed]
+      });
+      return;
+    }
+  }
+
+  if (!(mainTx || cohort7Tx)) return;
+
+  const viewGameMessage = `\n---\nView the game at https://play.raidguild.org (click "All Games" to find cohort games)`;
 
   const discordMembersSuccessfullyTipped = discordMembers.filter(
     m =>
       !discordTagsWithoutMainCharacterAccounts?.includes(
         m?.user.tag as string
-      ) && !discordTagsWithoutEthAddress?.main.includes(m?.user.tag as string)
+      ) &&
+      !discordTagsWithoutEthAddress?.main.includes(m?.user.tag as string) &&
+      !discordTagsWithoutCohortCharacterAccounts?.includes(
+        m?.user.tag as string
+      ) &&
+      !discordTagsWithoutEthAddress?.cohort7.includes(m?.user.tag as string)
   );
   const discordIdsSuccessfullyTipped = discordMembersSuccessfullyTipped.map(
     m => m?.user.id
@@ -247,7 +317,9 @@ export const recordAttendanceInteraction = async (
   embed = new EmbedBuilder()
     .setTitle('Attendance Recording Succeeded!')
     .setURL(
-      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${
+        (mainTx || cohort7Tx)?.hash
+      }`
     )
     .setDescription(
       `**<@${senderId}>** gave an attendance badge to all characters in this voice channel:\n${discordIdsSuccessfullyTipped.map(
@@ -257,22 +329,43 @@ export const recordAttendanceInteraction = async (
     .setColor('#ff3864')
     .setTimestamp();
 
-  const gameAddress = getAddress(
-    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
-  );
+  if (mainTx) {
+    const gameAddress = getAddress(
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+    );
 
-  const data = {
-    channelId,
-    lastSenderDiscordId,
-    newSenderDiscordId: senderId,
-    senderDiscordTag: interaction.user.tag,
-    gameAddress,
-    chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
-    txHash,
-    message: ''
-  };
+    const data = {
+      channelId,
+      lastSenderDiscordId,
+      newSenderDiscordId: senderId,
+      senderDiscordTag: interaction.user.tag,
+      gameAddress,
+      chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
+      txHash: mainTx.hash,
+      message: ''
+    };
 
-  await updateLatestXpTip(client, TABLE_NAME, data);
+    await updateLatestXpTip(client, TABLE_NAME, 'main', data);
+  }
+
+  if (cohort7Tx) {
+    const gameAddress = getAddress(
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.gameAddress
+    );
+
+    const data = {
+      channelId,
+      lastSenderDiscordId,
+      newSenderDiscordId: senderId,
+      senderDiscordTag: interaction.user.tag,
+      gameAddress,
+      chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.chainId,
+      txHash: cohort7Tx.hash,
+      message: ''
+    };
+
+    await updateLatestXpTip(client, TABLE_NAME, 'cohort7', data);
+  }
 
   await interaction.editReply({
     embeds: [embed]

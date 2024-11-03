@@ -18,6 +18,7 @@ import { discordLogger } from '@/utils/logger';
 export const checkUserNeedsCooldown = async (
   client: ClientWithCommands,
   tableName: string,
+  game: 'main' | 'cohort7',
   senderId?: string
 ): Promise<{
   channelId: string;
@@ -29,7 +30,7 @@ export const checkUserNeedsCooldown = async (
 }> => {
   try {
     const gameAddress = getAddress(
-      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].gameAddress
     );
     const dbClient = await dbPromise;
     const result = await dbClient
@@ -112,7 +113,9 @@ export const checkUserNeedsCooldown = async (
 export const updateLatestXpTip = async (
   client: ClientWithCommands,
   collectionName: string,
+  game: 'main' | 'cohort7',
   data: {
+    channelId: string;
     lastSenderDiscordId: string;
     newSenderDiscordId: string;
     senderDiscordTag: string;
@@ -122,6 +125,7 @@ export const updateLatestXpTip = async (
   }
 ) => {
   const {
+    channelId,
     lastSenderDiscordId,
     newSenderDiscordId,
     senderDiscordTag,
@@ -132,7 +136,7 @@ export const updateLatestXpTip = async (
 
   try {
     const gameAddress = getAddress(
-      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].gameAddress
     );
     const dbClient = await dbPromise;
     const result = await dbClient.collection(collectionName).findOneAndUpdate(
@@ -142,6 +146,7 @@ export const updateLatestXpTip = async (
       },
       {
         $set: {
+          channelId,
           senderDiscordId: newSenderDiscordId,
           senderDiscordTag,
           gameAddress,

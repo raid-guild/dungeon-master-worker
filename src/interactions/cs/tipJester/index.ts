@@ -47,7 +47,7 @@ export const tipJesterInteraction = async (
     needsCooldown,
     proposalActive,
     proposalExpiration
-  } = await checkUserNeedsCooldown(client, JESTER_TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, JESTER_TABLE_NAME, 'main');
 
   if (proposalActive) {
     const embed = new EmbedBuilder()

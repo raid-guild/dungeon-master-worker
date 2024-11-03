@@ -119,9 +119,9 @@ if (
   );
 }
 
-export const getNpcGnosisSafe = async () => {
+export const getNpcSafe = async (game: 'main' | 'cohort7') => {
   const provider = new ethers.providers.JsonRpcProvider(
-    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.rpcUrl
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].rpcUrl
   );
   const ownerSigner = new ethers.Wallet(NPC_SAFE_OWNER_KEY, provider);
 
@@ -132,7 +132,7 @@ export const getNpcGnosisSafe = async () => {
 
   const safe = await Safe.create({
     ethAdapter: ethAdapterOwner,
-    safeAddress: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.npcSafeAddress
+    safeAddress: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].npcSafeAddress
   });
 
   return safe;
@@ -166,7 +166,7 @@ export const dropExp = async (
   accountAddresses: string[],
   amount: string
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   const safeTransactionData = accountAddresses.map(accountAddress => {
     return buildDropExpTransactionData(accountAddress, amount);
@@ -190,6 +190,7 @@ export const dropExp = async (
 };
 
 const buildDropLootTransactionData = (
+  game: 'main' | 'cohort7',
   accountAddresses: Address[],
   itemIds: bigint[][],
   amounts: bigint[][]
@@ -205,7 +206,7 @@ const buildDropLootTransactionData = (
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
-    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.itemsAddress,
+    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].itemsAddress,
     data,
     value: '0'
   };
@@ -215,15 +216,17 @@ const buildDropLootTransactionData = (
 
 export const dropAttendanceBadges = async (
   client: ClientWithCommands,
+  game: 'main' | 'cohort7',
   accountAddresses: Address[]
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe(game);
   const itemIds = accountAddresses.map(() => [
-    BigInt(CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.attendanceBadgeId)
+    BigInt(CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].attendanceBadgeId)
   ]);
   const amounts = accountAddresses.map(() => [BigInt(1)]);
 
   const safeTransactionData = buildDropLootTransactionData(
+    game,
     accountAddresses,
     itemIds,
     amounts
@@ -279,7 +282,7 @@ export const giveClassExp = async (
   accountAddresses: string,
   classId: string
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   try {
     const safeTransactionData = buildGiveClassExpTransactionData(
@@ -327,7 +330,7 @@ export const giveClassExpWithDistro = async (
   client: ClientWithCommands,
   distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   const safeTransactionData = distroDocs.map(distroDoc => {
     const accountAddress = distroDoc.accountAddress as Address;
@@ -413,7 +416,7 @@ export const rollCharacterSheets = async (
   client: ClientWithCommands,
   distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   try {
     const safeTransactionData = await Promise.all(
