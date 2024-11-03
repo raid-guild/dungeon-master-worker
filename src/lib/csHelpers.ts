@@ -9,31 +9,28 @@ import {
 import { ethers } from 'ethers';
 import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import { uploadToPinata } from '@/lib/pinata';
 import { ClientWithCommands, InvoiceXpDistroDocument } from '@/types';
 import {
-  ATTENDANCE_BADGE_ID,
-  CHARACTER_SHEETS_SUBGRAPH_URL,
-  CLASS_ADDRESS,
-  ITEMS_ADDRESS,
+  ENVIRONMENT,
   JESTER_TIP_AMOUNT,
-  NPC_SAFE_ADDRESS,
-  NPC_SAFE_OWNER_KEY,
-  RAIDGUILD_GAME_ADDRESS,
-  RPC_URL,
-  XP_ADDRESS
+  NPC_SAFE_OWNER_KEY
 } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
 
-if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
-  throw new Error(
-    'Missing envs RAIDGUILD_GAME_ADDRESS or CHARACTER_SHEETS_SUBGRAPH_URL'
-  );
+if (
+  !CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress ||
+  !CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl
+) {
+  throw new Error('Missing gameAddress or subgraphUrl config variables');
 }
 
 export const getCharacterAccountsByPlayerAddresses = async (
   client: ClientWithCommands,
   discordTagToEthAddressMap: Record<string, string>,
+  gameAddress: string,
+  subgraphUrl: string,
   interaction?:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
@@ -46,7 +43,7 @@ export const getCharacterAccountsByPlayerAddresses = async (
     });
     const query = `
       query CharacterAccountQuery {
-        characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player_in: ${JSON.stringify(
+        characters(where: { game: "${gameAddress}", player_in: ${JSON.stringify(
       formattedAddresses
     )}}) {
           account
@@ -56,7 +53,7 @@ export const getCharacterAccountsByPlayerAddresses = async (
     `;
 
     const response = await axios({
-      url: CHARACTER_SHEETS_SUBGRAPH_URL,
+      url: subgraphUrl,
       method: 'post',
       data: {
         query
@@ -110,20 +107,22 @@ export const getCharacterAccountsByPlayerAddresses = async (
 
 if (
   !(
-    NPC_SAFE_ADDRESS &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.npcSafeAddress &&
     NPC_SAFE_OWNER_KEY &&
-    RPC_URL &&
-    XP_ADDRESS &&
-    CLASS_ADDRESS
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.rpcUrl &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress
   )
 ) {
   throw new Error(
-    'Missing envs NPC_SAFE_ADDRESS or NPC_SAFE_OWNER_KEY or RPC_URL or XP_ADDRESS'
+    'Missing npcSafeAddress, npcSafeOwnerKey, rpcUrl, xpAddress, or classesAddress config variables'
   );
 }
 
 export const getNpcGnosisSafe = async () => {
-  const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+  const provider = new ethers.providers.JsonRpcProvider(
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.rpcUrl
+  );
   const ownerSigner = new ethers.Wallet(NPC_SAFE_OWNER_KEY, provider);
 
   const ethAdapterOwner = new EthersAdapter({
@@ -133,7 +132,7 @@ export const getNpcGnosisSafe = async () => {
 
   const safe = await Safe.create({
     ethAdapter: ethAdapterOwner,
-    safeAddress: NPC_SAFE_ADDRESS
+    safeAddress: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.npcSafeAddress
   });
 
   return safe;
@@ -154,7 +153,7 @@ const buildDropExpTransactionData = (
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
-    to: XP_ADDRESS,
+    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress,
     data,
     value: '0'
   };
@@ -206,7 +205,7 @@ const buildDropLootTransactionData = (
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
-    to: ITEMS_ADDRESS,
+    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.itemsAddress,
     data,
     value: '0'
   };
@@ -219,7 +218,9 @@ export const dropAttendanceBadges = async (
   accountAddresses: Address[]
 ) => {
   const safe = await getNpcGnosisSafe();
-  const itemIds = accountAddresses.map(() => [BigInt(ATTENDANCE_BADGE_ID)]);
+  const itemIds = accountAddresses.map(() => [
+    BigInt(CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.attendanceBadgeId)
+  ]);
   const amounts = accountAddresses.map(() => [BigInt(1)]);
 
   const safeTransactionData = buildDropLootTransactionData(
@@ -262,7 +263,7 @@ const buildGiveClassExpTransactionData = (
     });
 
     const giveClassExpTransactionData: SafeTransactionDataPartial = {
-      to: CLASS_ADDRESS,
+      to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress,
       data,
       value: '0'
     };
@@ -397,7 +398,7 @@ const buildRollCharacterTransactionData = async (
     });
 
     const rollCharacterSheetTransactionData: SafeTransactionDataPartial = {
-      to: RAIDGUILD_GAME_ADDRESS,
+      to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
       data,
       value: '0'
     };

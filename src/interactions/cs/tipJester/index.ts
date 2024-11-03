@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 import { getAddress } from 'viem';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import { completeJesterTip } from '@/interactions/cs/tipJester/completeJesterTip';
 import {
   checkUserNeedsCooldown,
@@ -17,11 +18,9 @@ import {
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {
-  CHAIN_ID,
-  EXPLORER_URL,
+  ENVIRONMENT,
   JESTER_TABLE_NAME,
   JESTER_TIP_AMOUNT,
-  RAIDGUILD_GAME_ADDRESS,
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
@@ -36,8 +35,8 @@ export const tipJesterInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  if (!EXPLORER_URL) {
-    discordLogger('Missing EXPLORER_URL env', client);
+  if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl) {
+    discordLogger('Missing explorerUrl config variable', client);
     return;
   }
 
@@ -169,8 +168,8 @@ export const tipJesterInteraction = async (
   );
 
   if (
-    !senderTagToEthAddressMap ||
-    !senderTagToEthAddressMap[interaction.user.tag]
+    !senderTagToEthAddressMap?.main ||
+    !senderTagToEthAddressMap.main[interaction.user.tag]
   ) {
     const embed = new EmbedBuilder()
       .setTitle('Not a Member')
@@ -192,14 +191,16 @@ export const tipJesterInteraction = async (
     meetingMcDiscordMembers as GuildMember[]
   );
 
-  if (!discordTagToEthAddressMap) return;
-  const playerAddresses = Object.values(discordTagToEthAddressMap);
+  if (!discordTagToEthAddressMap?.main) return;
+  const playerAddresses = Object.values(discordTagToEthAddressMap.main);
   if (!playerAddresses) return;
 
   const [discordTagToCharacterAccountMap] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap,
+      discordTagToEthAddressMap.main,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl,
       interaction
     );
   if (!discordTagToCharacterAccountMap) return;
@@ -227,8 +228,10 @@ export const tipJesterInteraction = async (
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    gameAddress: getAddress(RAIDGUILD_GAME_ADDRESS),
-    chainId: CHAIN_ID,
+    gameAddress: getAddress(
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+    ),
+    chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
     txHash: '',
     messageId: '',
     proposalExpiration: newProposalExpiration,

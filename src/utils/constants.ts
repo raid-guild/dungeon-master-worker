@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+export const ENVIRONMENT = (process.env.ENVIRONMENT ?? 'dev') as 'dev' | 'prod';
+
 export const DISCORD_DM_TOKEN = process.env.DISCORD_DM_TOKEN ?? '';
 export const DISCORD_GUARD_TOKEN = process.env.DISCORD_GUARD_TOKEN ?? '';
 export const DISCORD_DM_CLIENT_ID = process.env.DISCORD_DM_CLIENT_ID ?? '';
@@ -38,19 +40,12 @@ export const HASURA_GRAPHQL_ENDPOINT =
 export const HASURA_GRAPHQL_ADMIN_SECRET =
   process.env.HASURA_GRAPHQL_ADMIN_SECRET ?? '';
 
-export const ATTENDANCE_BADGE_ID = process.env.ATTENDANCE_BADGE_ID ?? '32';
-export const EXPLORER_URL = process.env.EXPLORER_URL ?? '';
-export const CHAIN_ID = process.env.CHAIN_ID ?? '';
-export const CHARACTER_SHEETS_SUBGRAPH_URL =
-  process.env.CHARACTER_SHEETS_SUBGRAPH_URL ?? '';
-export const CLASS_ADDRESS = process.env.CLASS_ADDRESS ?? '';
-export const ITEMS_ADDRESS = process.env.ITEMS_ADDRESS ?? '';
-export const NPC_SAFE_ADDRESS = process.env.NPC_SAFE_ADDRESS ?? '';
-export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
+export const GOOGLE_SHEETS_PROJECT_ID =
+  process.env.GOOGLE_SHEETS_PROJECT_ID ?? '';
+export const GOOGLE_SHEETS_API_KEY = process.env.GOOGLE_SHEETS_API_KEY ?? '';
+
 export const PINATA_JWT = process.env.PINATA_JWT ?? '';
-export const RAIDGUILD_GAME_ADDRESS = process.env.RAIDGUILD_GAME_ADDRESS ?? '';
-export const RPC_URL = process.env.RPC_URL ?? '';
-export const XP_ADDRESS = process.env.XP_ADDRESS ?? '';
+export const NPC_SAFE_OWNER_KEY = process.env.NPC_SAFE_OWNER_KEY ?? '';
 
 export const SMART_INVOICE_SUBGRAPH_URL =
   process.env.SMART_INVOICE_SUBGRAPH_URL ?? '';

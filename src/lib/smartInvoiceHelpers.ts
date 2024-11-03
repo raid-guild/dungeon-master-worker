@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   ClientWithCommands,
   Invoice,
@@ -8,9 +9,8 @@ import {
   TRANSACTION_STATUS
 } from '@/types';
 import {
-  CHAIN_ID,
+  ENVIRONMENT,
   RAIDGUILD_DAO_ADDRESS,
-  RAIDGUILD_GAME_ADDRESS,
   SMART_INVOICE_SUBGRAPH_URL,
   WXDAI_CONTRACT_ADDRESS
 } from '@/utils/constants';
@@ -20,8 +20,8 @@ export const getIsInvoiceProviderRaidGuild = async (
   client: ClientWithCommands,
   invoiceAddress: string
 ) => {
-  if (!SMART_INVOICE_SUBGRAPH_URL) {
-    throw new Error('Missing env SMART_INVOICE_SUBGRAPH_URL');
+  if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl) {
+    throw new Error('Missing subgraphUrl config variable');
   }
 
   if (!RAIDGUILD_DAO_ADDRESS) {
@@ -67,12 +67,12 @@ export const getAllRaidGuildInvoices = async (
       throw new Error('Missing env RAIDGUILD_DAO_ADDRESS');
     }
 
-    if (!CHAIN_ID) {
-      throw new Error('Missing env CHAIN_ID');
+    if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId) {
+      throw new Error('Missing chainId config variable');
     }
 
-    if (!RAIDGUILD_GAME_ADDRESS) {
-      throw new Error('Missing env RAIDGUILD_GAME_ADDRESS');
+    if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress) {
+      throw new Error('Missing gameAddress config variable');
     }
 
     const query = `
@@ -135,10 +135,10 @@ export const formatInvoiceXpDistributionDocuments = (
 
       if (amount > BigInt(0)) {
         newDocuments.push({
-          chainId: CHAIN_ID,
+          chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
           raidChannelId: '',
           invoiceAddress,
-          gameId: RAIDGUILD_GAME_ADDRESS,
+          gameId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
           playerAddress: address,
           accountAddress: '',
           discordTag: '',
