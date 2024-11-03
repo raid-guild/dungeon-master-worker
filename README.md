@@ -18,8 +18,8 @@ RaidGuild Guard does not allow bots to join the server.
 
 | Command                 | Description                                                                                |
 | ----------------------- | ------------------------------------------------------------------------------------------ |
-| `/tip-xp `              | Tips 10 XP in CharacterSheets to anyone @mentioned in the command                          |
-| `/tip-xp-attendance `   | Tips 20 XP in CharacterSheets to everyone in the voice channel that the command is used in |
+| `/tip-props`            | Tips 10 XP in CharacterSheets to anyone @mentioned in the command                          |
+| `/record-attendance`    | Tips 20 XP in CharacterSheets to everyone in the voice channel that the command is used in |
 | `/query `               | Prompts DM master with a question about specific raid or member data                       |
 | `/create-camp-channel ` | Creates a Camp channel with proper permissions                                             |
 | `/create-raid-channel`  | Creates a Raid channel with proper permissions                                             |

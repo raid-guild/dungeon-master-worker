@@ -4,9 +4,9 @@ import {
   EmbedBuilder,
   Events,
   GatewayIntentBits,
+  MessageReaction,
   Partials,
-  User,
-  MessageReaction
+  User
 } from 'discord.js';
 
 import {
@@ -19,14 +19,14 @@ import {
 } from '@/commands';
 import { setupGuardWorker } from '@/guardWorker';
 import {
+  completeJesterTip,
   propsInteraction,
   queryInteraction,
-  syncInvoiceDataInteraction,
   recordAttendanceInteraction,
+  syncInvoiceDataInteraction,
   tipJesterInteraction,
   tipScribeInteraction
 } from '@/interactions';
-import { completeJesterTip } from '@/interactions';
 import { getMcTipProposal } from '@/lib';
 import { ClientWithCommands } from '@/types';
 import {

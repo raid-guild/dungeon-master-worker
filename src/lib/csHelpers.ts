@@ -9,31 +9,28 @@ import {
 import { ethers } from 'ethers';
 import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import { uploadToPinata } from '@/lib/pinata';
 import { ClientWithCommands, InvoiceXpDistroDocument } from '@/types';
 import {
-  ATTENDANCE_BADGE_ID,
-  CHARACTER_SHEETS_SUBGRAPH_URL,
-  CLASS_ADDRESS,
-  ITEMS_ADDRESS,
-  NPC_SAFE_ADDRESS,
-  NPC_SAFE_OWNER_KEY,
-  RAIDGUILD_GAME_ADDRESS,
-  RPC_URL,
-  XP_ADDRESS
+  ENVIRONMENT,
+  JESTER_TIP_AMOUNT,
+  NPC_SAFE_OWNER_KEY
 } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
-import { JESTER_TIP_AMOUNT } from '@/interactions/cs/tipJester';
 
-if (!RAIDGUILD_GAME_ADDRESS || !CHARACTER_SHEETS_SUBGRAPH_URL) {
-  throw new Error(
-    'Missing envs RAIDGUILD_GAME_ADDRESS or CHARACTER_SHEETS_SUBGRAPH_URL'
-  );
+if (
+  !CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress ||
+  !CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl
+) {
+  throw new Error('Missing gameAddress or subgraphUrl config variables');
 }
 
 export const getCharacterAccountsByPlayerAddresses = async (
   client: ClientWithCommands,
   discordTagToEthAddressMap: Record<string, string>,
+  gameAddress: string,
+  subgraphUrl: string,
   interaction?:
     | ChatInputCommandInteraction
     | MessageContextMenuCommandInteraction
@@ -46,7 +43,7 @@ export const getCharacterAccountsByPlayerAddresses = async (
     });
     const query = `
       query CharacterAccountQuery {
-        characters(where: { game: "${RAIDGUILD_GAME_ADDRESS}", player_in: ${JSON.stringify(
+        characters(where: { game: "${gameAddress}", player_in: ${JSON.stringify(
       formattedAddresses
     )}}) {
           account
@@ -56,7 +53,7 @@ export const getCharacterAccountsByPlayerAddresses = async (
     `;
 
     const response = await axios({
-      url: CHARACTER_SHEETS_SUBGRAPH_URL,
+      url: subgraphUrl,
       method: 'post',
       data: {
         query
@@ -110,20 +107,22 @@ export const getCharacterAccountsByPlayerAddresses = async (
 
 if (
   !(
-    NPC_SAFE_ADDRESS &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.npcSafeAddress &&
     NPC_SAFE_OWNER_KEY &&
-    RPC_URL &&
-    XP_ADDRESS &&
-    CLASS_ADDRESS
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.rpcUrl &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress &&
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress
   )
 ) {
   throw new Error(
-    'Missing envs NPC_SAFE_ADDRESS or NPC_SAFE_OWNER_KEY or RPC_URL or XP_ADDRESS'
+    'Missing npcSafeAddress, npcSafeOwnerKey, rpcUrl, xpAddress, or classesAddress config variables'
   );
 }
 
-export const getNpcGnosisSafe = async () => {
-  const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+export const getNpcSafe = async (game: 'main' | 'cohort7') => {
+  const provider = new ethers.providers.JsonRpcProvider(
+    CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].rpcUrl
+  );
   const ownerSigner = new ethers.Wallet(NPC_SAFE_OWNER_KEY, provider);
 
   const ethAdapterOwner = new EthersAdapter({
@@ -133,7 +132,7 @@ export const getNpcGnosisSafe = async () => {
 
   const safe = await Safe.create({
     ethAdapter: ethAdapterOwner,
-    safeAddress: NPC_SAFE_ADDRESS
+    safeAddress: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].npcSafeAddress
   });
 
   return safe;
@@ -154,7 +153,7 @@ const buildDropExpTransactionData = (
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
-    to: XP_ADDRESS,
+    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress,
     data,
     value: '0'
   };
@@ -167,7 +166,7 @@ export const dropExp = async (
   accountAddresses: string[],
   amount: string
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   const safeTransactionData = accountAddresses.map(accountAddress => {
     return buildDropExpTransactionData(accountAddress, amount);
@@ -191,6 +190,7 @@ export const dropExp = async (
 };
 
 const buildDropLootTransactionData = (
+  game: 'main' | 'cohort7',
   accountAddresses: Address[],
   itemIds: bigint[][],
   amounts: bigint[][]
@@ -206,7 +206,7 @@ const buildDropLootTransactionData = (
   });
 
   const dropExpTransactionData: SafeTransactionDataPartial = {
-    to: ITEMS_ADDRESS,
+    to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].itemsAddress,
     data,
     value: '0'
   };
@@ -216,13 +216,17 @@ const buildDropLootTransactionData = (
 
 export const dropAttendanceBadges = async (
   client: ClientWithCommands,
+  game: 'main' | 'cohort7',
   accountAddresses: Address[]
 ) => {
-  const safe = await getNpcGnosisSafe();
-  const itemIds = accountAddresses.map(() => [BigInt(ATTENDANCE_BADGE_ID)]);
+  const safe = await getNpcSafe(game);
+  const itemIds = accountAddresses.map(() => [
+    BigInt(CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].attendanceBadgeId)
+  ]);
   const amounts = accountAddresses.map(() => [BigInt(1)]);
 
   const safeTransactionData = buildDropLootTransactionData(
+    game,
     accountAddresses,
     itemIds,
     amounts
@@ -262,7 +266,7 @@ const buildGiveClassExpTransactionData = (
     });
 
     const giveClassExpTransactionData: SafeTransactionDataPartial = {
-      to: CLASS_ADDRESS,
+      to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress,
       data,
       value: '0'
     };
@@ -278,7 +282,7 @@ export const giveClassExp = async (
   accountAddresses: string,
   classId: string
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   try {
     const safeTransactionData = buildGiveClassExpTransactionData(
@@ -326,7 +330,7 @@ export const giveClassExpWithDistro = async (
   client: ClientWithCommands,
   distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   const safeTransactionData = distroDocs.map(distroDoc => {
     const accountAddress = distroDoc.accountAddress as Address;
@@ -397,7 +401,7 @@ const buildRollCharacterTransactionData = async (
     });
 
     const rollCharacterSheetTransactionData: SafeTransactionDataPartial = {
-      to: RAIDGUILD_GAME_ADDRESS,
+      to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
       data,
       value: '0'
     };
@@ -412,7 +416,7 @@ export const rollCharacterSheets = async (
   client: ClientWithCommands,
   distroDocs: Omit<InvoiceXpDistroDocument, '_id'>[]
 ) => {
-  const safe = await getNpcGnosisSafe();
+  const safe = await getNpcSafe('main');
 
   try {
     const safeTransactionData = await Promise.all(

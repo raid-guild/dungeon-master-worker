@@ -8,19 +8,16 @@ import {
 } from 'discord.js';
 import { getAddress } from 'viem';
 
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
   getPlayerAddressesByDiscordTags,
-  updateLatestXpMcTip,
-  giveClassExp
+  giveClassExp,
+  updateLatestXpMcTip
 } from '@/lib';
 import { ClientWithCommands } from '@/types';
-import {
-  CHAIN_ID,
-  EXPLORER_URL,
-  RAIDGUILD_GAME_ADDRESS
-} from '@/utils/constants';
+import { ENVIRONMENT } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const SCRIBE_TIP_AMOUNT = '50';
@@ -34,8 +31,8 @@ export const tipScribeInteraction = async (
     | MessageContextMenuCommandInteraction
     | UserContextMenuCommandInteraction
 ) => {
-  if (!EXPLORER_URL) {
-    discordLogger('Missing EXPLORER_URL env', client);
+  if (!CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl) {
+    discordLogger('Missing explorerUrl config variable', client);
     return;
   }
 
@@ -61,7 +58,7 @@ export const tipScribeInteraction = async (
     needsCooldown,
     proposalActive,
     proposalExpiration
-  } = await checkUserNeedsCooldown(client, TABLE_NAME);
+  } = await checkUserNeedsCooldown(client, TABLE_NAME, 'main');
 
   if (proposalActive) {
     const embed = new EmbedBuilder()
@@ -182,8 +179,8 @@ export const tipScribeInteraction = async (
   );
 
   if (
-    !senderTagToEthAddressMap ||
-    !senderTagToEthAddressMap[interaction.user.tag]
+    !senderTagToEthAddressMap?.main ||
+    !senderTagToEthAddressMap.main[interaction.user.tag]
   ) {
     const embed = new EmbedBuilder()
       .setTitle('Not a Member')
@@ -205,14 +202,16 @@ export const tipScribeInteraction = async (
     meetingScribeDiscordMembers as GuildMember[]
   );
 
-  if (!discordTagToEthAddressMap) return;
-  const playerAddresses = Object.values(discordTagToEthAddressMap);
+  if (!discordTagToEthAddressMap?.main) return;
+  const playerAddresses = Object.values(discordTagToEthAddressMap.main);
   if (!playerAddresses) return;
 
   const [discordTagToCharacterAccountMap] =
     await getCharacterAccountsByPlayerAddresses(
       client,
-      discordTagToEthAddressMap,
+      discordTagToEthAddressMap.main,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.subgraphUrl,
       interaction
     );
   if (!discordTagToCharacterAccountMap) return;
@@ -238,8 +237,10 @@ export const tipScribeInteraction = async (
     lastSenderDiscordId,
     newSenderDiscordId: senderId,
     senderDiscordTag: interaction.user.tag,
-    gameAddress: getAddress(RAIDGUILD_GAME_ADDRESS),
-    chainId: CHAIN_ID,
+    gameAddress: getAddress(
+      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress
+    ),
+    chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId,
     txHash: '',
     messageId: '',
     receivingDiscordId: meetingScribeDiscordMembers[0]?.id,
@@ -271,9 +272,11 @@ export const tipScribeInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('<:scribe:757734310345310289> Scribe Tip Transaction Pending...')
-    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setURL(
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setDescription(
-      `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+      `Transaction is pending. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
     )
     .setColor('#ff3864')
     .setTimestamp();
@@ -289,9 +292,11 @@ export const tipScribeInteraction = async (
 
     embed = new EmbedBuilder()
       .setTitle('<:scribe:757734310345310289> Scribe Tip Transaction Failed!')
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
-        `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -304,7 +309,9 @@ export const tipScribeInteraction = async (
 
   embed = new EmbedBuilder()
     .setTitle('<:scribe:757734310345310289> Scribe Tip Succeeded!')
-    .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+    .setURL(
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+    )
     .setDescription(
       `<@${scribeTipData.receivingDiscordId}>'s character received ${SCRIBE_TIP_AMOUNT} Scribe XP for documenting this meeting.${viewGameMessage}`
     )

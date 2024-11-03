@@ -1,14 +1,18 @@
 import {
-  EmbedBuilder,
   ChatInputCommandInteraction,
+  EmbedBuilder,
   MessageReaction
 } from 'discord.js';
 
-import { JESTER_TIP_AMOUNT, TABLE_NAME } from '@/interactions/cs/tipJester';
+import { CHARACTER_SHEETS_CONFIG } from '@/config';
 import { giveClassExp, updateLatestXpMcTip } from '@/lib';
 import { JesterTipData } from '@/lib/dbHelpers';
 import { ClientWithCommands } from '@/types';
-import { EXPLORER_URL } from '@/utils/constants';
+import {
+  ENVIRONMENT,
+  JESTER_TABLE_NAME,
+  JESTER_TIP_AMOUNT
+} from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
 export const completeJesterTip = async (
@@ -54,7 +58,7 @@ export const completeJesterTip = async (
       txHash: '',
       tipPending: true
     };
-    await updateLatestXpMcTip(client, TABLE_NAME, data);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
     const tx = await giveClassExp(client, receivingAddress, '14');
     if (!tx) {
@@ -64,7 +68,7 @@ export const completeJesterTip = async (
         txHash: '',
         tipPending: false
       };
-      await updateLatestXpMcTip(client, TABLE_NAME, data);
+      await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
       return;
     }
 
@@ -74,9 +78,11 @@ export const completeJesterTip = async (
       .setTitle(
         '<:jester:1222930129999626271> Jester Tip Transaction Pending...'
       )
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
-        `Transaction is pending. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+        `Transaction is pending. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
       )
       .setColor('#ff3864')
       .setTimestamp();
@@ -96,15 +102,17 @@ export const completeJesterTip = async (
         txHash,
         tipPending: false
       };
-      await updateLatestXpMcTip(client, TABLE_NAME, data);
+      await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
       embed = new EmbedBuilder()
         .setTitle(
           '<:jester:1222930129999626271> Jester Tip Transaction Failed!'
         )
-        .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+        .setURL(
+          `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+        )
         .setDescription(
-          `Transaction failed. View your transaction here:\n${EXPLORER_URL}/tx/${txHash}`
+          `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
         )
         .setColor('#ff3864')
         .setTimestamp();
@@ -121,7 +129,9 @@ export const completeJesterTip = async (
 
     embed = new EmbedBuilder()
       .setTitle('<:jester:1222930129999626271> Jester Tip Succeeded!')
-      .setURL(`${EXPLORER_URL}/tx/${txHash}`)
+      .setURL(
+        `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${txHash}`
+      )
       .setDescription(
         `<@${receivingDiscordId}>'s character received ${JESTER_TIP_AMOUNT} Jester XP for MC'ing this meeting.${viewGameMessage}`
       )
@@ -135,7 +145,7 @@ export const completeJesterTip = async (
       tipPending: false
     };
 
-    await updateLatestXpMcTip(client, TABLE_NAME, data);
+    await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
     if (proposalMessage) {
       await proposalMessage.edit({ embeds: [embed] });
