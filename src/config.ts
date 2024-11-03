@@ -69,7 +69,7 @@ export const CHARACTER_SHEETS_CONFIG: CharacterSheetsConfig = {
       explorerUrl: EXPLORER_URLS[base.id],
       gameAddress: '0xc0533928955cb4dbd7723ccf27a613f791f6d0b1',
       itemsAddress: '0x44d0f6f31940603de049d8aa7507139b88dce781',
-      npcSafeAddress: '0x',
+      npcSafeAddress: '0xfC77f3Dd891093a049235afdAe236ab282dA64d6',
       npcSafeOwnerKey: NPC_SAFE_OWNER_KEY,
       rpcUrl: DEFAULT_PC_URLS[base.id],
       subgraphUrl: SUBGRAPH_URLS[base.id],
