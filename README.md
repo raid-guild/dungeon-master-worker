@@ -1,12 +1,10 @@
 # Dungeon Master Worker
 
-The DungeonMaster worker managing two different RaidGUild Discord bots: DungeonMaster (limited managing) and RaidGuild Guard (full mananging).
+The DungeonMaster Worker manages two different RaidGuild Discord bots: DungeonMaster and RaidGuild Guard.
 
-For the DungeonMaster bot, the worker only handles the answering querires about DungeonMaster CRM data.
+The DungeonMaster bot handles the answering queries about DungeonMaster CRM data. It also interacts with CharacterSheets by allowing props tipping, cleric tipping, jester tipping, and attendance recording.
 
-RaidGuild Guard welcomes everyone who joins the Discord server, and informs them to go to #unlock-channels to view public channels. Those who pass the guild.xyz test are automatically assigned the Moloch Soldier role, which gives permission to view and send messages in the public channels of Raid Guild’s Discord server.
-
-RaidGuild Guard does not allow bots to join the server.
+RaidGuild Guard welcomes everyone who joins the Discord server who is not a bot, and informs them to go to #unlock-channels to view public channels. If newcomers do not verify their account within a certain period of time, they are booted. RaidGuild Guard also handles vairious channel manipulation commands, such as allowing non-members to enter a private channel or sending a stale channel to Valhalla (our channel archives).
 
 ### Public commands
 
