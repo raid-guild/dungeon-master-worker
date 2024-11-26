@@ -207,7 +207,6 @@ export const recordAttendanceInteraction = async (
   await interaction.followUp({ embeds: [embed] });
 
   let mainTx = null;
-  let cohort7Tx = null;
 
   if (mainAccountAddresses.length > 0) {
     mainTx = await dropAttendanceBadges(
@@ -217,27 +216,12 @@ export const recordAttendanceInteraction = async (
     );
   }
 
-  if (cohortAccountAddresses.length > 0) {
-    cohort7Tx = await dropAttendanceBadges(
-      client,
-      'cohort7',
-      cohortAccountAddresses as Address[]
-    );
-  }
-
   let url = '';
   let description = '';
 
-  if (mainTx && cohort7Tx) {
-    url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`;
-    const cohort7Url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`;
-    description = `Transactions are pending.\n\nView the main game transaction here: ${url}\n\nView the cohort7 game transaction here: ${cohort7Url}`;
-  } else if (mainTx) {
+  if (mainTx) {
     url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx.hash}`;
     description = `Transaction is pending.\n\nView the main game transaction here: ${url}`;
-  } else if (cohort7Tx) {
-    url = `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`;
-    description = `Transaction is pending.\n\nView the cohort7 game transaction here: ${url}`;
   }
 
   embed = new EmbedBuilder()
@@ -273,29 +257,7 @@ export const recordAttendanceInteraction = async (
     }
   }
 
-  if (cohort7Tx) {
-    const txReceipt = await cohort7Tx.wait();
-
-    if (!txReceipt.status) {
-      embed = new EmbedBuilder()
-        .setTitle('Cohort7 Attendance Recording Tx Failed!')
-        .setURL(
-          `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`
-        )
-        .setDescription(
-          `Transaction failed. View your transaction here:\n${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.explorerUrl}/tx/${cohort7Tx.hash}`
-        )
-        .setColor('#ff3864')
-        .setTimestamp();
-
-      await interaction.editReply({
-        embeds: [embed]
-      });
-      return;
-    }
-  }
-
-  if (!(mainTx || cohort7Tx)) return;
+  if (!mainTx) return;
 
   const viewGameMessage = `\n---\nView the game at https://play.raidguild.org (click "All Games" to find cohort games)`;
 
@@ -317,9 +279,7 @@ export const recordAttendanceInteraction = async (
   embed = new EmbedBuilder()
     .setTitle('Attendance Recording Succeeded!')
     .setURL(
-      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${
-        (mainTx || cohort7Tx)?.hash
-      }`
+      `${CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.explorerUrl}/tx/${mainTx?.hash}`
     )
     .setDescription(
       `**<@${senderId}>** gave an attendance badge to all characters in this voice channel:\n${discordIdsSuccessfullyTipped.map(
@@ -346,25 +306,6 @@ export const recordAttendanceInteraction = async (
     };
 
     await updateLatestXpTip(client, TABLE_NAME, 'main', data);
-  }
-
-  if (cohort7Tx) {
-    const gameAddress = getAddress(
-      CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.gameAddress
-    );
-
-    const data = {
-      channelId,
-      lastSenderDiscordId,
-      newSenderDiscordId: senderId,
-      senderDiscordTag: interaction.user.tag,
-      gameAddress,
-      chainId: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].cohort7.chainId,
-      txHash: cohort7Tx.hash,
-      message: ''
-    };
-
-    await updateLatestXpTip(client, TABLE_NAME, 'cohort7', data);
   }
 
   await interaction.editReply({
