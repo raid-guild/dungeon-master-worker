@@ -5,8 +5,9 @@ import {
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
+import { createPublicClient, http } from 'viem';
 
-import { CHARACTER_SHEETS_CONFIG } from '@/config';
+import { CHAINS, CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   checkUserNeedsCooldown,
   dropExp,
@@ -151,10 +152,8 @@ export const propsInteraction = async (
 
   await interaction.followUp({ embeds: [embed] });
 
-  const tx = await dropExp(client, accountAddresses, TIP_AMOUNT);
-  if (!tx) return;
-
-  const txHash = tx.hash;
+  const txHash = await dropExp(client, accountAddresses, TIP_AMOUNT);
+  if (!txHash) return;
 
   embed = new EmbedBuilder()
     .setTitle('Props XP Transaction Pending...')
@@ -171,7 +170,15 @@ export const propsInteraction = async (
     embeds: [embed]
   });
 
-  const txReceipt = await tx.wait();
+  const publicClient = createPublicClient({
+    chain: CHAINS[CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId],
+    transport: http()
+  });
+
+  const txReceipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash as `0x${string}`,
+    timeout: 120000
+  });
 
   if (!txReceipt.status) {
     embed = new EmbedBuilder()

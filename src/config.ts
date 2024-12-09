@@ -1,5 +1,5 @@
 import { NPC_SAFE_OWNER_KEY } from 'utils/constants';
-import { base, gnosis, sepolia } from 'viem/chains';
+import { base, Chain, gnosis, sepolia } from 'viem/chains';
 
 type GameConfig = {
   attendanceBadgeId: number;
@@ -45,6 +45,12 @@ export const SUBGRAPH_URLS: { [key: number]: string } = {
     'https://api.studio.thegraph.com/query/71457/character-sheets-gnosis/version/latest',
   [sepolia.id]:
     'https://api.studio.thegraph.com/query/71457/character-sheets-sepolia/version/latest'
+};
+
+export const CHAINS: { [key: number]: Chain } = {
+  [base.id]: base,
+  [gnosis.id]: gnosis,
+  [sepolia.id]: sepolia
 };
 
 export const CHARACTER_SHEETS_CONFIG: CharacterSheetsConfig = {
