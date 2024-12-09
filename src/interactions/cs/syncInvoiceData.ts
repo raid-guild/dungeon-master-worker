@@ -8,7 +8,7 @@ import {
 import { createPublicClient, http } from 'viem';
 import { gnosis, sepolia } from 'viem/chains';
 
-import { CHARACTER_SHEETS_CONFIG } from '@/config';
+import { CHAINS, CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   formatInvoiceXpDistributionDocuments,
   getAllInvoicesWithPrimarySplit,
@@ -95,6 +95,11 @@ export const syncInvoiceDataInteraction = async (
   });
 
   const dbClient = await dbPromise;
+
+  const publicClient = createPublicClient({
+    chain: CHAINS[CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId],
+    transport: http()
+  });
 
   // const isInvoiceProviderRaidGuild = await getIsInvoiceProviderRaidGuild(
   //   client,
@@ -316,17 +321,18 @@ export const syncInvoiceDataInteraction = async (
     distroDoc => !discordTagToCharacterAccountMap1[distroDoc.discordTag ?? '']
   );
 
-  let tx = null;
+  let txHash: string | null = null;
 
   if (distroDocsWithoutAccountAddresses.length > 0) {
-    tx = await rollCharacterSheets(client, distroDocsWithoutAccountAddresses);
+    txHash = await rollCharacterSheets(
+      client,
+      distroDocsWithoutAccountAddresses
+    );
 
-    if (!tx) {
+    if (!txHash) {
       await sendErrorEmbed(interaction);
       return;
     }
-
-    const txHash = tx.hash;
 
     embed = new EmbedBuilder()
       .setTitle('Character Creation Transaction Pending...')
@@ -343,7 +349,10 @@ export const syncInvoiceDataInteraction = async (
       embeds: [embed]
     });
 
-    const txReceipt = await tx.wait(2);
+    const txReceipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash as `0x${string}`,
+      timeout: 120000
+    });
 
     if (!txReceipt.status) {
       embed = new EmbedBuilder()
@@ -410,19 +419,17 @@ export const syncInvoiceDataInteraction = async (
   );
 
   // 12) Give class XP to players
-  tx = await giveClassExpWithDistro(client, newInvoiceXpDistroDocs);
+  txHash = await giveClassExpWithDistro(client, newInvoiceXpDistroDocs);
 
-  if (!tx) {
+  if (!txHash) {
     await sendErrorEmbed(interaction);
     return;
   }
 
-  const txHash = tx.hash;
-
   newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {
     return {
       ...distroDoc,
-      transactionHash: txHash
+      transactionHash: txHash as string
     };
   });
 
@@ -441,7 +448,10 @@ export const syncInvoiceDataInteraction = async (
     embeds: [embed]
   });
 
-  const txReceipt = await tx.wait();
+  const txReceipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash as `0x${string}`,
+    timeout: 120000
+  });
 
   if (!txReceipt.status) {
     newInvoiceXpDistroDocs = newInvoiceXpDistroDocs.map(distroDoc => {

@@ -3,8 +3,9 @@ import {
   EmbedBuilder,
   MessageReaction
 } from 'discord.js';
+import { createPublicClient, http } from 'viem';
 
-import { CHARACTER_SHEETS_CONFIG } from '@/config';
+import { CHAINS, CHARACTER_SHEETS_CONFIG } from '@/config';
 import { giveClassExp, updateLatestXpMcTip } from '@/lib';
 import { JesterTipData } from '@/lib/dbHelpers';
 import { ClientWithCommands } from '@/types';
@@ -60,8 +61,8 @@ export const completeJesterTip = async (
     };
     await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
 
-    const tx = await giveClassExp(client, receivingAddress, '14');
-    if (!tx) {
+    const txHash = await giveClassExp(client, receivingAddress, '14');
+    if (!txHash) {
       data = {
         lastSenderDiscordId: senderDiscordId,
         newSenderDiscordId: senderDiscordId,
@@ -71,8 +72,6 @@ export const completeJesterTip = async (
       await updateLatestXpMcTip(client, JESTER_TABLE_NAME, data);
       return;
     }
-
-    const txHash = tx.hash;
 
     embed = new EmbedBuilder()
       .setTitle(
@@ -93,7 +92,15 @@ export const completeJesterTip = async (
       await interaction.editReply({ embeds: [embed] });
     }
 
-    const txReceipt = await tx.wait();
+    const publicClient = createPublicClient({
+      chain: CHAINS[CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId],
+      transport: http()
+    });
+
+    const txReceipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash as `0x${string}`,
+      timeout: 120000
+    });
 
     if (!txReceipt.status) {
       data = {
