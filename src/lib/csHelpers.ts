@@ -1,12 +1,11 @@
-import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
-import { SafeTransactionDataPartial } from '@safe-global/safe-core-sdk-types';
+import Safe from '@safe-global/protocol-kit';
+import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import axios from 'axios';
 import {
   ChatInputCommandInteraction,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction
 } from 'discord.js';
-import { ethers } from 'ethers';
 import { Address, encodeFunctionData, formatEther, parseAbi } from 'viem';
 
 import { CHARACTER_SHEETS_CONFIG } from '@/config';
@@ -120,18 +119,11 @@ if (
 }
 
 export const getNpcSafe = async (game: 'main' | 'cohort7') => {
-  const provider = new ethers.providers.JsonRpcProvider(
-    CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].rpcUrl
-  );
-  const ownerSigner = new ethers.Wallet(NPC_SAFE_OWNER_KEY, provider);
+  const provider = CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].rpcUrl;
 
-  const ethAdapterOwner = new EthersAdapter({
-    ethers,
-    signerOrProvider: ownerSigner
-  });
-
-  const safe = await Safe.create({
-    ethAdapter: ethAdapterOwner,
+  const safe = await Safe.init({
+    provider,
+    signer: NPC_SAFE_OWNER_KEY,
     safeAddress: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].npcSafeAddress
   });
 
@@ -152,7 +144,7 @@ const buildDropExpTransactionData = (
     args: [accountAddress as Address, BigInt(amount)]
   });
 
-  const dropExpTransactionData: SafeTransactionDataPartial = {
+  const dropExpTransactionData: MetaTransactionData = {
     to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress,
     data,
     value: '0'
@@ -174,15 +166,11 @@ export const dropExp = async (
 
   try {
     const safeTx = await safe.createTransaction({
-      safeTransactionData
+      transactions: safeTransactionData
     });
 
     const txRes = await safe.executeTransaction(safeTx);
-    const tx = txRes.transactionResponse;
-
-    if (!tx) throw new Error('Could not submit transaction');
-
-    return tx;
+    return txRes.hash;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;
@@ -205,7 +193,7 @@ const buildDropLootTransactionData = (
     args: [accountAddresses, itemIds, amounts]
   });
 
-  const dropExpTransactionData: SafeTransactionDataPartial = {
+  const dropExpTransactionData: MetaTransactionData = {
     to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].itemsAddress,
     data,
     value: '0'
@@ -234,15 +222,11 @@ export const dropAttendanceBadges = async (
 
   try {
     const safeTx = await safe.createTransaction({
-      safeTransactionData
+      transactions: [safeTransactionData]
     });
 
     const txRes = await safe.executeTransaction(safeTx);
-    const tx = txRes.transactionResponse;
-
-    if (!tx) throw new Error('Could not submit transaction');
-
-    return tx;
+    return txRes.hash;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;
@@ -265,7 +249,7 @@ const buildGiveClassExpTransactionData = (
       args: [accountAddress, BigInt(classId), BigInt(amount)]
     });
 
-    const giveClassExpTransactionData: SafeTransactionDataPartial = {
+    const giveClassExpTransactionData: MetaTransactionData = {
       to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress,
       data,
       value: '0'
@@ -296,15 +280,11 @@ export const giveClassExp = async (
     }
 
     const safeTx = await safe.createTransaction({
-      safeTransactionData: safeTransactionData as SafeTransactionDataPartial
+      transactions: [safeTransactionData as MetaTransactionData]
     });
 
     const txRes = await safe.executeTransaction(safeTx);
-    const tx = txRes.transactionResponse;
-
-    if (!tx) throw new Error('Could not submit transaction');
-
-    return tx;
+    return txRes.hash;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;
@@ -351,15 +331,11 @@ export const giveClassExpWithDistro = async (
 
   try {
     const safeTx = await safe.createTransaction({
-      safeTransactionData: safeTransactionData as SafeTransactionDataPartial[]
+      transactions: safeTransactionData as MetaTransactionData[]
     });
 
     const txRes = await safe.executeTransaction(safeTx);
-    const tx = txRes.transactionResponse;
-
-    if (!tx) throw new Error('Could not submit transaction');
-
-    return tx;
+    return txRes.hash;
   } catch (err) {
     console.log(err);
     discordLogger(JSON.stringify(err), client);
@@ -400,7 +376,7 @@ const buildRollCharacterTransactionData = async (
       args: [playerAddress, cid]
     });
 
-    const rollCharacterSheetTransactionData: SafeTransactionDataPartial = {
+    const rollCharacterSheetTransactionData: MetaTransactionData = {
       to: CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.gameAddress,
       data,
       value: '0'
@@ -431,15 +407,11 @@ export const rollCharacterSheets = async (
     }
 
     const safeTx = await safe.createTransaction({
-      safeTransactionData: safeTransactionData as SafeTransactionDataPartial[]
+      transactions: safeTransactionData as MetaTransactionData[]
     });
 
     const txRes = await safe.executeTransaction(safeTx);
-    const tx = txRes.transactionResponse;
-
-    if (!tx) throw new Error('Could not submit transaction');
-
-    return tx;
+    return txRes.hash;
   } catch (err) {
     discordLogger(JSON.stringify(err), client);
     return null;

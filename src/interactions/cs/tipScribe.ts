@@ -6,9 +6,9 @@ import {
   UserContextMenuCommandInteraction,
   VoiceBasedChannel
 } from 'discord.js';
-import { getAddress } from 'viem';
+import { createPublicClient, getAddress, http } from 'viem';
 
-import { CHARACTER_SHEETS_CONFIG } from '@/config';
+import { CHAINS, CHARACTER_SHEETS_CONFIG } from '@/config';
 import {
   checkUserNeedsCooldown,
   getCharacterAccountsByPlayerAddresses,
@@ -261,14 +261,12 @@ export const tipScribeInteraction = async (
   scribeTipData.tipPending = true;
   await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
 
-  const tx = await giveClassExp(client, accountAddresses[0], '4');
-  if (!tx) {
+  const txHash = await giveClassExp(client, accountAddresses[0], '4');
+  if (!txHash) {
     scribeTipData.tipPending = false;
     await updateLatestXpMcTip(client, TABLE_NAME, scribeTipData);
     return;
   }
-
-  const txHash = tx.hash;
 
   embed = new EmbedBuilder()
     .setTitle('<:scribe:757734310345310289> Scribe Tip Transaction Pending...')
@@ -283,7 +281,15 @@ export const tipScribeInteraction = async (
 
   await interaction.editReply({ embeds: [embed] });
 
-  const txReceipt = await tx.wait();
+  const publicClient = createPublicClient({
+    chain: CHAINS[CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.chainId],
+    transport: http()
+  });
+
+  const txReceipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash as `0x${string}`,
+    timeout: 120000
+  });
 
   if (!txReceipt.status) {
     scribeTipData.txHash = txHash;
