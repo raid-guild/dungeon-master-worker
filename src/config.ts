@@ -34,7 +34,7 @@ export const EXPLORER_URLS: { [key: number]: string } = {
 
 export const DEFAULT_PC_URLS: { [key: number]: string } = {
   [base.id]: 'https://mainnet.base.org',
-  [gnosis.id]: 'https://gnosischain-mainnet.rpc.porters.xyz/dI5OQj5TLG',
+  [gnosis.id]: 'https://rpc.gnosis.gateway.fm',
   [sepolia.id]: 'https://rpc.sepolia.org'
 };
 
