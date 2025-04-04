@@ -107,19 +107,22 @@ export const getCharacterAccountsByPlayerAddresses = async (
 if (
   !(
     CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.npcSafeAddress &&
-    NPC_SAFE_OWNER_KEY &&
     CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.rpcUrl &&
     CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.xpAddress &&
     CHARACTER_SHEETS_CONFIG[ENVIRONMENT].main.classesAddress
   )
 ) {
   throw new Error(
-    'Missing npcSafeAddress, npcSafeOwnerKey, rpcUrl, xpAddress, or classesAddress config variables'
+    'Missing npcSafeAddress, rpcUrl, xpAddress, or classesAddress config variables'
   );
 }
 
 export const getNpcSafe = async (game: 'main' | 'cohort7') => {
   const provider = CHARACTER_SHEETS_CONFIG[ENVIRONMENT][game].rpcUrl;
+
+  if (!NPC_SAFE_OWNER_KEY) {
+    throw new Error('Missing env NPC_SAFE_OWNER_KEY');
+  }
 
   const safe = await Safe.init({
     provider,

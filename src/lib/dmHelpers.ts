@@ -15,18 +15,6 @@ import {
 } from '@/utils/constants';
 import { discordLogger, logError } from '@/utils/logger';
 
-if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
-  throw new Error(
-    'Missing envs HASURA_GRAPHQL_ENDPOINT or HASURA_GRAPHQL_ADMIN_SECRET'
-  );
-}
-
-if (!GOOGLE_SHEETS_API_KEY || !GOOGLE_SHEETS_PROJECT_ID) {
-  throw new Error(
-    'Missing envs GOOGLE_SHEETS_API_KEY or GOOGLE_SHEETS_PROJECT_ID'
-  );
-}
-
 export const getPlayerAddressesByDiscordTags = async (
   client: ClientWithCommands,
   interaction:
@@ -41,6 +29,18 @@ export const getPlayerAddressesByDiscordTags = async (
   ]
 > => {
   try {
+    if (!HASURA_GRAPHQL_ENDPOINT || !HASURA_GRAPHQL_ADMIN_SECRET) {
+      throw new Error(
+        'Missing envs HASURA_GRAPHQL_ENDPOINT or HASURA_GRAPHQL_ADMIN_SECRET'
+      );
+    }
+
+    if (!GOOGLE_SHEETS_API_KEY || !GOOGLE_SHEETS_PROJECT_ID) {
+      throw new Error(
+        'Missing envs GOOGLE_SHEETS_API_KEY or GOOGLE_SHEETS_PROJECT_ID'
+      );
+    }
+
     const discordUsernames = discordMembers.map(m => m?.user.tag);
     const query = `
       query MemberQuery {
