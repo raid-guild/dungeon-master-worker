@@ -3,10 +3,6 @@ import { Readable } from 'stream';
 
 import { PINATA_JWT } from '@/utils/constants';
 
-if (!PINATA_JWT) {
-  throw new Error(`Invalid/Missing environment variable: "PINATA_JWT"`);
-}
-
 const bufferToStream = (buffer: Buffer) => {
   const readable = new Readable();
   // eslint-disable-next-line no-underscore-dangle
@@ -21,6 +17,10 @@ export const uploadToPinata = async (
   fileName: string
 ): Promise<string> => {
   try {
+    if (!PINATA_JWT) {
+      throw new Error(`Invalid/Missing environment variable: "PINATA_JWT"`);
+    }
+
     const pinata = new PinataSDK({ pinataJWTKey: PINATA_JWT });
     const readableStreamForFile = bufferToStream(file);
     const options: PinataPinOptions = {
