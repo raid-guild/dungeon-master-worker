@@ -6,7 +6,8 @@ import {
   recordAttendanceCommand,
   // syncInvoiceDataCommand,
   tipJesterCommand,
-  tipScribeCommand
+  tipScribeCommand,
+  toValhallaCommand
 } from '@/commands';
 import {
   DISCORD_DM_CLIENT_ID,
@@ -20,7 +21,8 @@ const commands = [
   recordAttendanceCommand.toJSON(),
   // syncInvoiceDataCommand.toJSON(),
   tipJesterCommand.toJSON(),
-  tipScribeCommand.toJSON()
+  tipScribeCommand.toJSON(),
+  toValhallaCommand.toJSON()
 ];
 
 const rest = new REST().setToken(DISCORD_DM_TOKEN);
