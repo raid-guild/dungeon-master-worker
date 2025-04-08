@@ -1,6 +1,0 @@
-package.json
-src/commands/guard/valhalla.ts
-src/controllers/valhalla-callback.ts
-src/deploy-commands.ts
-src/index.ts
-yarn.lock
