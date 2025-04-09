@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Client, PermissionFlagsBits, TextChannel, CategoryChannel, GuildChannel } from 'discord.js';
+import { Client, PermissionFlagsBits, TextChannel, CategoryChannel } from 'discord.js';
 import { discordLogger } from '@/utils/logger';
 import { DISCORD_VALHALLA_CATEGORY_ID } from '@/utils/constants';
 
@@ -15,8 +15,15 @@ const generateUniqueChannelName = (name: string, category: CategoryChannel) => {
   // Get all channels in the Valhalla category
   const valhallaChannels = category.children.cache;
   
-  // Check if there's already a channel with this name
-  if (!valhallaChannels.some((ch: GuildChannel) => ch.name === name)) {
+  // Convert to lowercase for case-insensitive comparison
+  const nameLowerCase = name.toLowerCase();
+  
+  // Check if there's already a channel with this name (case-insensitive)
+  const hasDuplicate = valhallaChannels.some(
+    (ch) => ch.name.toLowerCase() === nameLowerCase
+  );
+  
+  if (!hasDuplicate) {
     return name; // No duplicate, return original name
   }
   
@@ -24,7 +31,9 @@ const generateUniqueChannelName = (name: string, category: CategoryChannel) => {
   let counter = 1;
   let newName = `${name}-${counter}`;
   
-  while (valhallaChannels.some((ch: GuildChannel) => ch.name === newName)) {
+  while (valhallaChannels.some(
+    (ch) => ch.name.toLowerCase() === newName.toLowerCase()
+  )) {
     counter++;
     newName = `${name}-${counter}`;
   }
@@ -156,6 +165,9 @@ export const valhallaCallbackController = async (
     }
 
     try {
+      // Make sure we have the latest list of channels in the category by fetching them
+      await guild.channels.fetch();
+      
       // Generate a unique name if needed
       const uniqueChannelName = generateUniqueChannelName(channel.name, targetCategory);
       const needsRename = uniqueChannelName !== channel.name;
