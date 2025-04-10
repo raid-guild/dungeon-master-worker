@@ -100,8 +100,36 @@ export const setupGuardWorker = () => {
       return;
     }
 
-    await interaction.deferReply();
-    await executeInteraction(interaction);
+    try {
+      await interaction.deferReply();
+      await executeInteraction(interaction);
+    } catch (error) {
+      // Handle Discord API errors gracefully
+      const discordError = error as any; // Type assertion for the error
+      
+      if (discordError && discordError.code === 10062) {
+        console.log(`Interaction expired for command: ${interaction.commandName}`);
+        
+        // If possible, try to send a message to the channel instead
+        try {
+          if (interaction.channel) {
+            await interaction.channel.send({
+              embeds: [{
+                title: 'Command Timeout',
+                description: 'Sorry, I couldn\'t respond to your command in time. Please try again.',
+                color: 0xff3864
+              }]
+            });
+          }
+        } catch (followUpError) {
+          console.error('Failed to send fallback message:', followUpError);
+        }
+      } else {
+        // Log the error but don't crash
+        console.error(`Error handling interaction for command ${interaction.commandName}:`, error);
+        discordLogger(`Error in command execution: ${interaction.commandName}`, interaction.client);
+      }
+    }
   });
 
   client.login(DISCORD_GUARD_TOKEN);

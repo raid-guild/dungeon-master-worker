@@ -29,7 +29,18 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('This is already in Valhalla!');
 
-      await interaction.followUp({ embeds: [embed] });
+      try {
+        await interaction.followUp({ embeds: [embed] });
+      } catch (error) {
+        const discordError = error as any; // Type assertion for the error
+        
+        if (discordError && discordError.code === 10062) {
+          // Interaction expired, try to send as a regular message
+          await channel.send({ embeds: [embed] });
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
       return;
     }
     
@@ -38,11 +49,22 @@ export const toValhallaExecute = async (
       .setColor('#ff3864')
       .setDescription('Starting export process for this channel. This may take a few minutes...');
 
-    await interaction.followUp({ embeds: [embed] });
+    try {
+      await interaction.followUp({ embeds: [embed] });
+    } catch (error) {
+      const discordError = error as any; // Type assertion for the error
+      
+      if (discordError && discordError.code === 10062) {
+        // Interaction expired, try to send as a regular message
+        await channel.send({ embeds: [embed] });
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
     
     // Call the Discord Exporter service to start the export
     try {
-      const exportResponse = await axios.post(process.env.DISCORD_EXPORTER_URL || 'https://discord-exporter-latest.onrender.com/export', {
+      const exportResponse = await axios.post('https://discord-exporter-latest.onrender.com/export', {
         channelId: channel.id,
         guildId: interaction.guildId
       });
@@ -55,7 +77,18 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('Export has been initiated. The channel will be moved to Valhalla once the export is complete.');
       
-      await interaction.followUp({ embeds: [updateEmbed] });
+      try {
+        await interaction.followUp({ embeds: [updateEmbed] });
+      } catch (error) {
+        const discordError = error as any; // Type assertion for the error
+        
+        if (discordError && discordError.code === 10062) {
+          // Interaction expired, try to send as a regular message
+          await channel.send({ embeds: [updateEmbed] });
+        } else {
+          console.error('Error sending update:', error);
+        }
+      }
       
     } catch (error) {
       console.error('Error initiating export:', error);
@@ -64,11 +97,38 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('There was an error starting the export process. The channel has NOT been moved to Valhalla.');
       
-      await interaction.followUp({ embeds: [errorEmbed] });
+      try {
+        await interaction.followUp({ embeds: [errorEmbed] });
+      } catch (followUpError) {
+        const discordFollowUpError = followUpError as any; // Type assertion for the error
+        
+        if (discordFollowUpError && discordFollowUpError.code === 10062) {
+          // Interaction expired, try to send as a regular message
+          await channel.send({ embeds: [errorEmbed] });
+        } else {
+          console.error('Error sending error notification:', followUpError);
+        }
+      }
+      
       discordLogger(`Error exporting channel ${channel.name}: ${error}`, interaction.client);
     }
   } catch (err) {
     console.error(err);
     discordLogger('Error caught in valhalla command.', interaction.client);
+    
+    // Try to notify the user if possible
+    try {
+      if (interaction.channel) {
+        await (interaction.channel as TextChannel).send({
+          embeds: [{
+            title: 'Error',
+            description: 'An error occurred while processing the to-valhalla command.',
+            color: 0xff3864
+          }]
+        });
+      }
+    } catch (notifyError) {
+      console.error('Failed to notify user of error:', notifyError);
+    }
   }
 };
