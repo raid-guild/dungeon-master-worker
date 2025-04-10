@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Client, PermissionFlagsBits, TextChannel, CategoryChannel } from 'discord.js';
+import { Client, PermissionFlagsBits, TextChannel, CategoryChannel, GuildChannel } from 'discord.js';
 import { discordLogger } from '@/utils/logger';
 import { DISCORD_VALHALLA_CATEGORY_ID } from '@/utils/constants';
 
@@ -10,20 +10,31 @@ interface ValhallaCallbackRequestBody {
   archiveUrl?: string;
 }
 
+// Define a type for sanitized error details
+interface SanitizedErrorDetails {
+  message: string;
+  name: string;
+  type: string;
+  stack?: string;
+}
+
+// Helper function to safely sanitize errors
+function sanitizeError(error: unknown): SanitizedErrorDetails {
+  return {
+    message: error instanceof Error ? error.message : String(error),
+    name: error instanceof Error ? error.name : 'Unknown',
+    type: typeof error,
+    stack: error instanceof Error ? error.stack : undefined
+  };
+}
+
 // Function to generate a unique channel name in case of duplicates
 const generateUniqueChannelName = (name: string, category: CategoryChannel) => {
   // Get all channels in the Valhalla category
   const valhallaChannels = category.children.cache;
   
-  // Convert to lowercase for case-insensitive comparison
-  const nameLowerCase = name.toLowerCase();
-  
-  // Check if there's already a channel with this name (case-insensitive)
-  const hasDuplicate = valhallaChannels.some(
-    (ch) => ch.name.toLowerCase() === nameLowerCase
-  );
-  
-  if (!hasDuplicate) {
+  // Check if there's already a channel with this name
+  if (!valhallaChannels.some((ch: GuildChannel) => ch.name === name)) {
     return name; // No duplicate, return original name
   }
   
@@ -31,9 +42,7 @@ const generateUniqueChannelName = (name: string, category: CategoryChannel) => {
   let counter = 1;
   let newName = `${name}-${counter}`;
   
-  while (valhallaChannels.some(
-    (ch) => ch.name.toLowerCase() === newName.toLowerCase()
-  )) {
+  while (valhallaChannels.some((ch: GuildChannel) => ch.name === newName)) {
     counter++;
     newName = `${name}-${counter}`;
   }
@@ -165,9 +174,6 @@ export const valhallaCallbackController = async (
     }
 
     try {
-      // Make sure we have the latest list of channels in the category by fetching them
-      await guild.channels.fetch();
-      
       // Generate a unique name if needed
       const uniqueChannelName = generateUniqueChannelName(channel.name, targetCategory);
       const needsRename = uniqueChannelName !== channel.name;
@@ -203,13 +209,8 @@ export const valhallaCallbackController = async (
         archiveUrl
       });
     } catch (moveError) {
-      // Detailed error logging
-      const errorDetails = {
-        message: moveError instanceof Error ? moveError.message : String(moveError),
-        name: moveError instanceof Error ? moveError.name : 'Unknown',
-        stack: moveError instanceof Error ? moveError.stack : undefined,
-        stringified: JSON.stringify(moveError, Object.getOwnPropertyNames(moveError instanceof Error ? moveError : {}))
-      };
+      // Detailed error logging with sanitization
+      const errorDetails = sanitizeError(moveError);
       
       discordLogger(`Detailed error moving channel to Valhalla: ${JSON.stringify(errorDetails, null, 2)}`, client);
       
@@ -230,11 +231,7 @@ export const valhallaCallbackController = async (
       });
     }
   } catch (error) {
-    const errorDetails = {
-      message: error instanceof Error ? error.message : String(error),
-      name: error instanceof Error ? error.name : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined
-    };
+    const errorDetails = sanitizeError(error);
     
     console.error('Error in valhalla-callback:', errorDetails);
     discordLogger(`Error in valhalla-callback: ${JSON.stringify(errorDetails, null, 2)}`, client);
