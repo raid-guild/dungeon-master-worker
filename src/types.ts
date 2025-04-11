@@ -53,3 +53,10 @@ export type InvoiceXpDistroDocument = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export interface DiscordAPIError extends Error {
+  code?: number;
+  httpStatus?: number;
+  method?: string;
+  path?: string;
+}

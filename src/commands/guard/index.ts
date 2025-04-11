@@ -1,4 +1,5 @@
 import { CacheType, CommandInteraction } from 'discord.js';
+import { DiscordAPIError } from '@/types';
 
 import {
   createCampChannelCommand,
@@ -66,7 +67,7 @@ export const executeInteraction = async (
     }
   } catch (error) {
     // Handle Discord API errors gracefully
-    const discordError = error as any; // Type assertion for the error
+    const discordError = error as DiscordAPIError;
     
     if (discordError && discordError.code === 10062) {
       console.log(`Interaction expired for command: ${commandName}`);

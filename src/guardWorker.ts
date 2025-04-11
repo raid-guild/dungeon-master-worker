@@ -105,7 +105,7 @@ export const setupGuardWorker = () => {
       await executeInteraction(interaction);
     } catch (error) {
       // Handle Discord API errors gracefully
-      const discordError = error as any; // Type assertion for the error
+      const discordError = error as { code?: number; message?: string }; // Type assertion for the error
       
       if (discordError && discordError.code === 10062) {
         console.log(`Interaction expired for command: ${interaction.commandName}`);

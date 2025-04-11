@@ -1,4 +1,5 @@
 import { CommandInteraction, EmbedBuilder, TextChannel } from 'discord.js';
+import { DiscordAPIError } from '@/types';
 
 /**
  * Sends a message using interaction.followUp with fallback to regular channel message
@@ -18,7 +19,7 @@ export async function sendMessageWithFallback(
   try {
     await interaction.followUp({ embeds: [embed], ephemeral });
   } catch (error) {
-    const discordError = error as Error & { code?: number };
+    const discordError = error as DiscordAPIError;
     
     if (discordError && discordError.code === 10062) {
       // Interaction expired, try to send as a regular message

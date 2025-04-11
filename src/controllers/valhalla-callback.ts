@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Client, PermissionFlagsBits, TextChannel, CategoryChannel, GuildChannel } from 'discord.js';
 import { discordLogger } from '@/utils/logger';
 import { DISCORD_VALHALLA_CATEGORY_ID } from '@/utils/constants';
+import { DiscordAPIError } from '@/types';
 
 interface ValhallaCallbackRequestBody {
   channelId: string;
@@ -15,15 +16,18 @@ interface SanitizedErrorDetails {
   message: string;
   name: string;
   type: string;
+  code?: number;
   stack?: string;
 }
 
 // Helper function to safely sanitize errors
 function sanitizeError(error: unknown): SanitizedErrorDetails {
+  const discordError = error as DiscordAPIError;
   return {
     message: error instanceof Error ? error.message : String(error),
     name: error instanceof Error ? error.name : 'Unknown',
     type: typeof error,
+    code: discordError.code,
     stack: error instanceof Error ? error.stack : undefined
   };
 }
@@ -210,7 +214,14 @@ export const valhallaCallbackController = async (
       });
     } catch (moveError) {
       // Detailed error logging with sanitization
-      const errorDetails = sanitizeError(moveError);
+      interface ErrorWithCode extends Error {
+        code?: number;
+        httpStatus?: number;
+        method?: string;
+        path?: string;
+      }
+      
+      const errorDetails = sanitizeError(moveError as ErrorWithCode);
       
       discordLogger(`Detailed error moving channel to Valhalla: ${JSON.stringify(errorDetails, null, 2)}`, client);
       
