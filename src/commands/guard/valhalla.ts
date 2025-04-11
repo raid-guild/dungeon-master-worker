@@ -43,10 +43,10 @@ export const toValhallaExecute = async (
     
     // Call the Discord Exporter service to start the export
     try {
-      const exportResponse = await axios.post('https://discord-exporter-latest.onrender.com/export', {
+      const exportResponse = await axios.post(process.env.DISCORD_EXPORTER_URL! || 'https://discord-exporter-latest.onrender.com/export', {
         channelId: channel.id,
         guildId: interaction.guildId
-      });
+      }, { timeout: 10000 }); // Add a 10-second timeout
       
       if (exportResponse.status !== 202) {
         throw new Error(`Export request failed with status: ${exportResponse.status}`);
