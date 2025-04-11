@@ -9,6 +9,7 @@ import axios from 'axios';
 
 import { DISCORD_VALHALLA_CATEGORY_ID } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
+import { sendMessageWithFallback } from '@/utils/discord-utils';
 
 export const toValhallaCommand = new SlashCommandBuilder()
   .setName('to-valhalla')
@@ -29,18 +30,7 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('This is already in Valhalla!');
 
-      try {
-        await interaction.followUp({ embeds: [embed] });
-      } catch (error) {
-        const discordError = error as any; // Type assertion for the error
-        
-        if (discordError && discordError.code === 10062) {
-          // Interaction expired, try to send as a regular message
-          await channel.send({ embeds: [embed] });
-        } else {
-          throw error; // Re-throw other errors
-        }
-      }
+      await sendMessageWithFallback(interaction, channel, embed);
       return;
     }
     
@@ -49,18 +39,7 @@ export const toValhallaExecute = async (
       .setColor('#ff3864')
       .setDescription('Starting export process for this channel. This may take a few minutes...');
 
-    try {
-      await interaction.followUp({ embeds: [embed] });
-    } catch (error) {
-      const discordError = error as any; // Type assertion for the error
-      
-      if (discordError && discordError.code === 10062) {
-        // Interaction expired, try to send as a regular message
-        await channel.send({ embeds: [embed] });
-      } else {
-        throw error; // Re-throw other errors
-      }
-    }
+    await sendMessageWithFallback(interaction, channel, embed);
     
     // Call the Discord Exporter service to start the export
     try {
@@ -77,18 +56,7 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('Export has been initiated. The channel will be moved to Valhalla once the export is complete.');
       
-      try {
-        await interaction.followUp({ embeds: [updateEmbed] });
-      } catch (error) {
-        const discordError = error as any; // Type assertion for the error
-        
-        if (discordError && discordError.code === 10062) {
-          // Interaction expired, try to send as a regular message
-          await channel.send({ embeds: [updateEmbed] });
-        } else {
-          console.error('Error sending update:', error);
-        }
-      }
+      await sendMessageWithFallback(interaction, channel, updateEmbed);
       
     } catch (error) {
       console.error('Error initiating export:', error);
@@ -97,18 +65,7 @@ export const toValhallaExecute = async (
         .setColor('#ff3864')
         .setDescription('There was an error starting the export process. The channel has NOT been moved to Valhalla.');
       
-      try {
-        await interaction.followUp({ embeds: [errorEmbed] });
-      } catch (followUpError) {
-        const discordFollowUpError = followUpError as any; // Type assertion for the error
-        
-        if (discordFollowUpError && discordFollowUpError.code === 10062) {
-          // Interaction expired, try to send as a regular message
-          await channel.send({ embeds: [errorEmbed] });
-        } else {
-          console.error('Error sending error notification:', followUpError);
-        }
-      }
+      await sendMessageWithFallback(interaction, channel, errorEmbed);
       
       discordLogger(`Error exporting channel ${channel.name}: ${error}`, interaction.client);
     }
