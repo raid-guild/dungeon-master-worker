@@ -1,5 +1,4 @@
 import { CacheType, CommandInteraction } from 'discord.js';
-import { DiscordAPIError } from '@/types';
 
 import {
   createCampChannelCommand,
@@ -25,6 +24,7 @@ import {
   toValhallaCommand,
   toValhallaExecute
 } from '@/commands/guard/valhalla';
+import { DiscordAPIError } from '@/types';
 import { discordLogger } from '@/utils/logger';
 
 export {
@@ -68,19 +68,22 @@ export const executeInteraction = async (
   } catch (error) {
     // Handle Discord API errors gracefully
     const discordError = error as DiscordAPIError;
-    
+
     if (discordError && discordError.code === 10062) {
       console.log(`Interaction expired for command: ${commandName}`);
-      
+
       // If possible, try to send a message to the channel instead
       try {
         if (interaction.channel) {
           await interaction.channel.send({
-            embeds: [{
-              title: 'Command Timeout',
-              description: 'Sorry, I couldn\'t respond to your command in time. Please try again.',
-              color: 0xff3864
-            }]
+            embeds: [
+              {
+                title: 'Command Timeout',
+                description:
+                  "Sorry, I couldn't respond to your command in time. Please try again.",
+                color: 0xff3864
+              }
+            ]
           });
         }
       } catch (followUpError) {
@@ -88,14 +91,17 @@ export const executeInteraction = async (
       }
     } else {
       console.error(`Error executing command ${commandName}:`, error);
-      discordLogger(`Error executing command ${commandName}: ${error}`, interaction.client);
-      
+      discordLogger(
+        `Error executing command ${commandName}: ${error}`,
+        interaction.client
+      );
+
       // Try to respond with an error message if interaction is still valid
       try {
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ 
+          await interaction.reply({
             content: 'An error occurred while processing your command.',
-            ephemeral: true 
+            ephemeral: true
           });
         } else if (interaction.deferred) {
           await interaction.followUp({

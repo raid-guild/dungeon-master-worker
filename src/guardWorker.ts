@@ -1,6 +1,7 @@
 import {
   Client,
   Collection,
+  DiscordAPIError,
   Events,
   GatewayIntentBits,
   Partials,
@@ -27,7 +28,6 @@ import {
   DISCORD_UNLOCK_CHANNELS_ID
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import { DiscordAPIError } from 'discord.js';
 
 export const setupGuardWorker = () => {
   const client: ClientWithCommands = new Client({
@@ -107,19 +107,24 @@ export const setupGuardWorker = () => {
     } catch (error) {
       // Handle Discord API errors gracefully
       const discordError = error as DiscordAPIError; // Type assertion for the error
-      
+
       if (discordError && discordError.code === 10062) {
-        console.log(`Interaction expired for command: ${interaction.commandName}`);
-        
+        console.log(
+          `Interaction expired for command: ${interaction.commandName}`
+        );
+
         // If possible, try to send a message to the channel instead
         try {
           if (interaction.channel) {
             await interaction.channel.send({
-              embeds: [{
-                title: 'Command Timeout',
-                description: 'Sorry, I couldn\'t respond to your command in time. Please try again.',
-                color: 0xff3864
-              }]
+              embeds: [
+                {
+                  title: 'Command Timeout',
+                  description:
+                    "Sorry, I couldn't respond to your command in time. Please try again.",
+                  color: 0xff3864
+                }
+              ]
             });
           }
         } catch (followUpError) {
@@ -127,8 +132,14 @@ export const setupGuardWorker = () => {
         }
       } else {
         // Log the error but don't crash
-        console.error(`Error handling interaction for command ${interaction.commandName}:`, error);
-        discordLogger(`Error in command execution: ${interaction.commandName}`, interaction.client);
+        console.error(
+          `Error handling interaction for command ${interaction.commandName}:`,
+          error
+        );
+        discordLogger(
+          `Error in command execution: ${interaction.commandName}`,
+          interaction.client
+        );
       }
     }
   });

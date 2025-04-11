@@ -1,5 +1,3 @@
-// src/index.ts (with fixed types)
-import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import {
   Client,
@@ -11,6 +9,7 @@ import {
   Partials,
   User
 } from 'discord.js';
+import express, { Request, Response } from 'express';
 
 import {
   propsCommand,
@@ -20,6 +19,11 @@ import {
   tipJesterCommand,
   tipScribeCommand
 } from '@/commands';
+import {
+  toValhallaCommand,
+  toValhallaExecute
+} from '@/commands/guard/valhalla';
+import valhallaCallbackHandler from '@/controllers/valhalla-callback';
 import { setupGuardWorker } from '@/guardWorker';
 import {
   completeJesterTip,
@@ -38,8 +42,6 @@ import {
   TIP_PROPOSAL_REACTION_THRESHOLD
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
-import valhallaCallbackController from '@/controllers/valhalla-callback';
-import { toValhallaCommand, toValhallaExecute } from '@/commands/guard/valhalla';
 
 // Set up Express server for callback endpoint
 const app = express();
@@ -69,7 +71,7 @@ export const setupDungeonMasterWorker = () => {
 
   // Set up the callback endpoint for export completion
   app.post('/valhalla-callback', (req: Request, res: Response) => {
-    valhallaCallbackController(req, res, client);
+    valhallaCallbackHandler(req, res, client);
   });
 
   // Health check endpoint
@@ -136,7 +138,7 @@ export const setupDungeonMasterWorker = () => {
       case tipScribeCommand.name:
         await tipScribeInteraction(client, interaction);
         break;
-      case toValhallaCommand.name:  // Add this case
+      case toValhallaCommand.name: // Add this case
         await toValhallaExecute(interaction);
         break;
       default:
@@ -147,7 +149,7 @@ export const setupDungeonMasterWorker = () => {
     }
   });
 
-  client.on(Events.MessageReactionAdd, async (reaction, _user) => {
+  client.on(Events.MessageReactionAdd, async reaction => {
     try {
       // If the reaction is partial, fetch the complete reaction
       if (reaction.partial) {
@@ -158,36 +160,36 @@ export const setupDungeonMasterWorker = () => {
           return;
         }
       }
-  
+
       const message = await reaction.message.fetch();
       const reactions = message.reactions.cache;
       const reactionUsers = await Promise.all(
         reactions.map((r: MessageReaction) => r.users.fetch())
       );
-      
+
       const getUserIdsFromCollection = (collection: Collection<string, User>) =>
         Array.from(collection.keys());
       const arrayOfUserIds = reactionUsers.map(getUserIdsFromCollection).flat();
       const uniqueUsersCount = new Set(arrayOfUserIds).size;
-  
+
       const mcTipProposal = await getMcTipProposal(client);
-  
+
       if (
         !mcTipProposal ||
         uniqueUsersCount < TIP_PROPOSAL_REACTION_THRESHOLD ||
         reaction.message.id !== mcTipProposal.messageId
       )
         return;
-  
+
       // Make sure the mcTipProposal is not null
       if (mcTipProposal.txHash || mcTipProposal.tipPending) return;
       if (!mcTipProposal.receivingDiscordId)
         throw new Error('No receiving Discord ID found!');
-      if (!mcTipProposal.receivingAddress) 
+      if (!mcTipProposal.receivingAddress)
         throw new Error('No receiving address found!');
-      if (!mcTipProposal.proposalExpiration) 
+      if (!mcTipProposal.proposalExpiration)
         throw new Error('No proposal expiration found!');
-  
+
       if (Date.now() > mcTipProposal.proposalExpiration) {
         const embed = new EmbedBuilder()
           .setTitle(
@@ -198,11 +200,11 @@ export const setupDungeonMasterWorker = () => {
           )
           .setColor('#ff3864')
           .setTimestamp();
-  
+
         await reaction.message.channel.send({ embeds: [embed] });
         return;
       }
-  
+
       await completeJesterTip(client, mcTipProposal, {
         reaction: reaction as MessageReaction
       });
@@ -212,7 +214,7 @@ export const setupDungeonMasterWorker = () => {
   });
 
   client.login(DISCORD_DM_TOKEN);
-  
+
   // Start the Express server after client setup
   app.listen(PORT, () => {
     console.log(`Callback server running on port ${PORT}`);
