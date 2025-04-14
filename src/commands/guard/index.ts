@@ -1,4 +1,5 @@
-import { CacheType, CommandInteraction } from 'discord.js';
+import { CacheType, CommandInteraction, EmbedBuilder, TextChannel } from 'discord.js';
+import { DiscordAPIError } from '@/types';
 
 import {
   createCampChannelCommand,
@@ -24,8 +25,8 @@ import {
   toValhallaCommand,
   toValhallaExecute
 } from '@/commands/guard/valhalla';
-import { DiscordAPIError } from '@/types';
 import { discordLogger } from '@/utils/logger';
+import { sendMessageWithFallback } from '@/utils/discord-utils';
 
 export {
   createCampChannelCommand,
@@ -61,57 +62,39 @@ export const executeInteraction = async (
       case roleStatsCommand.name:
         await roleStatsExecute(interaction);
         break;
-      default:
-        console.error(`Command ${commandName} not found`);
-        break;
-    }
-  } catch (error) {
-    // Handle Discord API errors gracefully
-    const discordError = error as DiscordAPIError;
-
-    if (discordError && discordError.code === 10062) {
-      console.log(`Interaction expired for command: ${commandName}`);
-
-      // If possible, try to send a message to the channel instead
-      try {
-        if (interaction.channel) {
-          await interaction.channel.send({
-            embeds: [
-              {
-                title: 'Command Timeout',
-                description:
-                  "Sorry, I couldn't respond to your command in time. Please try again.",
-                color: 0xff3864
-              }
-            ]
-          });
-        }
-      } catch (followUpError) {
-        console.error('Failed to send fallback message:', followUpError);
+        default:
+          console.error(`Command ${commandName} not found`);
+          break;
       }
-    } else {
-      console.error(`Error executing command ${commandName}:`, error);
-      discordLogger(
-        `Error executing command ${commandName}: ${error}`,
-        interaction.client
-      );
-
-      // Try to respond with an error message if interaction is still valid
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: 'An error occurred while processing your command.',
-            ephemeral: true
-          });
-        } else if (interaction.deferred) {
-          await interaction.followUp({
-            content: 'An error occurred while processing your command.',
-            ephemeral: true
-          });
+    } catch (error) {
+      // Handle Discord API errors gracefully
+      const discordError = error as DiscordAPIError;
+      
+      if (discordError && discordError.code === 10062) {
+        console.log(`Interaction expired for command: ${commandName}`);
+        
+        // Use the sendMessageWithFallback utility if the channel is available
+        if (interaction.channel && interaction.channel instanceof TextChannel) {
+          const timeoutEmbed = new EmbedBuilder()
+            .setTitle('Command Timeout')
+            .setDescription('Sorry, I couldn\'t respond to your command in time. Please try again.')
+            .setColor('#ff3864');
+            
+          await sendMessageWithFallback(interaction, interaction.channel, timeoutEmbed);
         }
-      } catch (responseError) {
-        console.error('Failed to send error response:', responseError);
+      } else {
+        console.error(`Error executing command ${commandName}:`, error);
+        discordLogger(`Error executing command ${commandName}: ${error}`, interaction.client);
+        
+        // Use sendMessageWithFallback for error response
+        if (interaction.channel && interaction.channel instanceof TextChannel) {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Error')
+            .setDescription('An error occurred while processing your command.')
+            .setColor('#ff3864');
+            
+          await sendMessageWithFallback(interaction, interaction.channel, errorEmbed, true);
+        }
       }
     }
-  }
-};
+  };

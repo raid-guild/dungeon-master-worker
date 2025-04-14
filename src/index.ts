@@ -138,7 +138,7 @@ export const setupDungeonMasterWorker = () => {
       case tipScribeCommand.name:
         await tipScribeInteraction(client, interaction);
         break;
-      case toValhallaCommand.name: // Add this case
+      case toValhallaCommand.name:
         await toValhallaExecute(interaction);
         break;
       default:
