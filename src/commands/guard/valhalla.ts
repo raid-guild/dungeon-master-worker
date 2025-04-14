@@ -46,15 +46,21 @@ export const toValhallaExecute = async (
     // Call the Discord Exporter service to start the export
     try {
       const { DISCORD_EXPORTER_URL } = await import('@/utils/constants');
-      
+
       if (!DISCORD_EXPORTER_URL) {
-        throw new Error('DISCORD_EXPORTER_URL environment variable is not defined');
+        throw new Error(
+          'DISCORD_EXPORTER_URL environment variable is not defined'
+        );
       }
-      
-      const exportResponse = await axios.post(DISCORD_EXPORTER_URL, {
-        channelId: channel.id,
-        guildId: interaction.guildId
-      }, { timeout: 10000 }); // Add a 10-second timeout
+
+      const exportResponse = await axios.post(
+        DISCORD_EXPORTER_URL,
+        {
+          channelId: channel.id,
+          guildId: interaction.guildId
+        },
+        { timeout: 10000 }
+      ); // Add a 10-second timeout
 
       if (exportResponse.status !== 202) {
         throw new Error(

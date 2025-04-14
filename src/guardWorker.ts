@@ -1,11 +1,11 @@
 import {
   Client,
   Collection,
+  EmbedBuilder,
   Events,
   GatewayIntentBits,
   Partials,
-  TextChannel,
-  EmbedBuilder
+  TextChannel
 } from 'discord.js';
 
 import {
@@ -27,9 +27,8 @@ import {
   DISCORD_NEWCOMERS_CHANNEL_ID,
   DISCORD_UNLOCK_CHANNELS_ID
 } from '@/utils/constants';
-import { discordLogger } from '@/utils/logger';
 import { sendMessageWithFallback } from '@/utils/discord-utils';
-
+import { discordLogger } from '@/utils/logger';
 
 export const setupGuardWorker = () => {
   const client: ClientWithCommands = new Client({
@@ -93,48 +92,67 @@ export const setupGuardWorker = () => {
 
   client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isCommand()) return;
-  
+
     const command = (interaction.client as ClientWithCommands).commands?.get(
       interaction.commandName
     );
-  
+
     if (!command) {
       console.log(`Command ${interaction.commandName} not found`);
       return;
     }
-  
+
     try {
       await interaction.deferReply();
       await executeInteraction(interaction);
     } catch (error) {
       // Handle Discord API errors gracefully
       const discordError = error as DiscordAPIError;
-      
+
       if (discordError && discordError.code === 10062) {
-        console.log(`Interaction expired for command: ${interaction.commandName}`);
-        
+        console.log(
+          `Interaction expired for command: ${interaction.commandName}`
+        );
+
         // Use the sendMessageWithFallback utility if the channel is available
         if (interaction.channel && interaction.channel instanceof TextChannel) {
           const errorEmbed = new EmbedBuilder()
             .setTitle('Command Timeout')
-            .setDescription('Sorry, I couldn\'t respond to your command in time. Please try again.')
+            .setDescription(
+              "Sorry, I couldn't respond to your command in time. Please try again."
+            )
             .setColor('#ff3864');
-            
-          await sendMessageWithFallback(interaction, interaction.channel, errorEmbed);
+
+          await sendMessageWithFallback(
+            interaction,
+            interaction.channel,
+            errorEmbed
+          );
         }
       } else {
         // Log the error but don't crash
-        console.error(`Error handling interaction for command ${interaction.commandName}:`, error);
-        discordLogger(`Error in command execution: ${interaction.commandName}`, interaction.client);
-        
+        console.error(
+          `Error handling interaction for command ${interaction.commandName}:`,
+          error
+        );
+        discordLogger(
+          `Error in command execution: ${interaction.commandName}`,
+          interaction.client
+        );
+
         // Try to send an error message using the utility
         if (interaction.channel && interaction.channel instanceof TextChannel) {
           const errorEmbed = new EmbedBuilder()
             .setTitle('Error')
             .setDescription('An error occurred while processing your command.')
             .setColor('#ff3864');
-            
-          await sendMessageWithFallback(interaction, interaction.channel, errorEmbed, true);
+
+          await sendMessageWithFallback(
+            interaction,
+            interaction.channel,
+            errorEmbed,
+            true
+          );
         }
       }
     }
