@@ -1,3 +1,4 @@
+import bodyParser from 'body-parser';
 import {
   Client,
   Collection,
@@ -8,6 +9,7 @@ import {
   Partials,
   User
 } from 'discord.js';
+import express, { Request, Response } from 'express';
 
 import {
   propsCommand,
@@ -17,6 +19,11 @@ import {
   tipJesterCommand,
   tipScribeCommand
 } from '@/commands';
+import {
+  toValhallaCommand,
+  toValhallaExecute
+} from '@/commands/guard/valhalla';
+import valhallaCallbackHandler from '@/controllers/valhalla-callback';
 import { setupGuardWorker } from '@/guardWorker';
 import {
   completeJesterTip,
@@ -36,6 +43,13 @@ import {
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
+// Set up Express server for callback endpoint
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
+
 export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
     intents: [
@@ -53,6 +67,17 @@ export const setupDungeonMasterWorker = () => {
   client.commands.set(syncInvoiceDataCommand.name, syncInvoiceDataCommand);
   client.commands.set(tipJesterCommand.name, tipJesterCommand);
   client.commands.set(tipScribeCommand.name, tipScribeCommand);
+  client.commands.set(toValhallaCommand.name, toValhallaCommand);
+
+  // Set up the callback endpoint for export completion
+  app.post('/valhalla-callback', (req: Request, res: Response) => {
+    valhallaCallbackHandler(req, res, client);
+  });
+
+  // Health check endpoint
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'healthy', botConnected: client.isReady() });
+  });
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -76,7 +101,8 @@ export const setupDungeonMasterWorker = () => {
       propsCommand.name,
       recordAttendanceCommand.name,
       tipJesterCommand.name,
-      tipScribeCommand.name
+      tipScribeCommand.name,
+      toValhallaCommand.name
     ];
 
     if (
@@ -112,6 +138,9 @@ export const setupDungeonMasterWorker = () => {
       case tipScribeCommand.name:
         await tipScribeInteraction(client, interaction);
         break;
+      case toValhallaCommand.name:
+        await toValhallaExecute(interaction);
+        break;
       default:
         await interaction.followUp({
           content: 'Command not found!'
@@ -122,11 +151,22 @@ export const setupDungeonMasterWorker = () => {
 
   client.on(Events.MessageReactionAdd, async reaction => {
     try {
+      // If the reaction is partial, fetch the complete reaction
+      if (reaction.partial) {
+        try {
+          await reaction.fetch();
+        } catch (error) {
+          console.error('Error fetching reaction:', error);
+          return;
+        }
+      }
+
       const message = await reaction.message.fetch();
       const reactions = message.reactions.cache;
       const reactionUsers = await Promise.all(
-        reactions.map(r => r.users.fetch())
+        reactions.map((r: MessageReaction) => r.users.fetch())
       );
+
       const getUserIdsFromCollection = (collection: Collection<string, User>) =>
         Array.from(collection.keys());
       const arrayOfUserIds = reactionUsers.map(getUserIdsFromCollection).flat();
@@ -135,26 +175,22 @@ export const setupDungeonMasterWorker = () => {
       const mcTipProposal = await getMcTipProposal(client);
 
       if (
+        !mcTipProposal ||
         uniqueUsersCount < TIP_PROPOSAL_REACTION_THRESHOLD ||
-        reaction.message.id !== mcTipProposal?.messageId
+        reaction.message.id !== mcTipProposal.messageId
       )
         return;
 
-      const {
-        receivingDiscordId,
-        receivingAddress,
-        txHash: alreadyExistingTxHash,
-        proposalExpiration,
-        tipPending
-      } = mcTipProposal;
-
-      if (alreadyExistingTxHash || tipPending) return;
-      if (!receivingDiscordId)
+      // Make sure the mcTipProposal is not null
+      if (mcTipProposal.txHash || mcTipProposal.tipPending) return;
+      if (!mcTipProposal.receivingDiscordId)
         throw new Error('No receiving Discord ID found!');
-      if (!receivingAddress) throw new Error('No receiving address found!');
-      if (!proposalExpiration) throw new Error('No proposal expiration found!');
+      if (!mcTipProposal.receivingAddress)
+        throw new Error('No receiving address found!');
+      if (!mcTipProposal.proposalExpiration)
+        throw new Error('No proposal expiration found!');
 
-      if (Date.now() > proposalExpiration) {
+      if (Date.now() > mcTipProposal.proposalExpiration) {
         const embed = new EmbedBuilder()
           .setTitle(
             '<:jester:1222930129999626271> Jester Tipping Proposal Expired!'
@@ -178,6 +214,11 @@ export const setupDungeonMasterWorker = () => {
   });
 
   client.login(DISCORD_DM_TOKEN);
+
+  // Start the Express server after client setup
+  app.listen(PORT, () => {
+    console.log(`Callback server running on port ${PORT}`);
+  });
 };
 
 setupDungeonMasterWorker();

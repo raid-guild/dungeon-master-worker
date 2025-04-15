@@ -1,6 +1,7 @@
 import {
   Client,
   Collection,
+  EmbedBuilder,
   Events,
   GatewayIntentBits,
   Partials,
@@ -18,7 +19,7 @@ import {
 } from '@/commands';
 import { lurkerGuard } from '@/features/lurkerGuard';
 import { roleClaim } from '@/features/roleClaim';
-import { ClientWithCommands } from '@/types';
+import { ClientWithCommands, DiscordAPIError } from '@/types';
 import {
   DISCORD_ALLOW_BOTS,
   DISCORD_GUARD_TOKEN,
@@ -26,6 +27,7 @@ import {
   DISCORD_NEWCOMERS_CHANNEL_ID,
   DISCORD_UNLOCK_CHANNELS_ID
 } from '@/utils/constants';
+import { sendMessageWithFallback } from '@/utils/discord-utils';
 import { discordLogger } from '@/utils/logger';
 
 export const setupGuardWorker = () => {
@@ -100,8 +102,60 @@ export const setupGuardWorker = () => {
       return;
     }
 
-    await interaction.deferReply();
-    await executeInteraction(interaction);
+    try {
+      await interaction.deferReply();
+      await executeInteraction(interaction);
+    } catch (error) {
+      // Handle Discord API errors gracefully
+      const discordError = error as DiscordAPIError;
+
+      if (discordError && discordError.code === 10062) {
+        console.log(
+          `Interaction expired for command: ${interaction.commandName}`
+        );
+
+        // Use the sendMessageWithFallback utility if the channel is available
+        if (interaction.channel && interaction.channel instanceof TextChannel) {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Command Timeout')
+            .setDescription(
+              "Sorry, I couldn't respond to your command in time. Please try again."
+            )
+            .setColor('#ff3864');
+
+          await sendMessageWithFallback(
+            interaction,
+            interaction.channel,
+            errorEmbed
+          );
+        }
+      } else {
+        // Log the error but don't crash
+        console.error(
+          `Error handling interaction for command ${interaction.commandName}:`,
+          error
+        );
+        discordLogger(
+          `Error in command execution: ${interaction.commandName}`,
+          interaction.client
+        );
+
+        // Try to send an error message using the utility
+        if (interaction.channel && interaction.channel instanceof TextChannel) {
+          const errorEmbed = new EmbedBuilder()
+            .setTitle('Error')
+            .setDescription('An error occurred while processing your command.')
+            .setColor('#ff3864');
+
+          await sendMessageWithFallback(
+            interaction,
+            interaction.channel,
+            errorEmbed,
+            true
+          );
+        }
+      }
+    }
   });
 
   client.login(DISCORD_GUARD_TOKEN);
