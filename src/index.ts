@@ -1,4 +1,3 @@
-import bodyParser from 'body-parser';
 import {
   Client,
   Collection,
@@ -9,7 +8,6 @@ import {
   Partials,
   User
 } from 'discord.js';
-import express, { Request, Response } from 'express';
 
 import {
   propsCommand,
@@ -23,7 +21,6 @@ import {
   toValhallaCommand,
   toValhallaExecute
 } from '@/commands/guard/valhalla';
-import valhallaCallbackHandler from '@/controllers/valhalla-callback';
 import { setupGuardWorker } from '@/guardWorker';
 import {
   completeJesterTip,
@@ -43,13 +40,6 @@ import {
 } from '@/utils/constants';
 import { discordLogger } from '@/utils/logger';
 
-// Set up Express server for callback endpoint
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware to parse JSON bodies
-app.use(bodyParser.json());
-
 export const setupDungeonMasterWorker = () => {
   const client: ClientWithCommands = new Client({
     intents: [
@@ -68,16 +58,6 @@ export const setupDungeonMasterWorker = () => {
   client.commands.set(tipJesterCommand.name, tipJesterCommand);
   client.commands.set(tipScribeCommand.name, tipScribeCommand);
   client.commands.set(toValhallaCommand.name, toValhallaCommand);
-
-  // Set up the callback endpoint for export completion
-  app.post('/valhalla-callback', (req: Request, res: Response) => {
-    valhallaCallbackHandler(req, res, client);
-  });
-
-  // Health check endpoint
-  app.get('/health', (_req: Request, res: Response) => {
-    res.status(200).json({ status: 'healthy', botConnected: client.isReady() });
-  });
 
   client.once(Events.ClientReady, c => {
     console.log(`Discord DM bot ready! Logged in as ${c.user.tag}`);
@@ -214,11 +194,6 @@ export const setupDungeonMasterWorker = () => {
   });
 
   client.login(DISCORD_DM_TOKEN);
-
-  // Start the Express server after client setup
-  app.listen(PORT, () => {
-    console.log(`Callback server running on port ${PORT}`);
-  });
 };
 
 setupDungeonMasterWorker();

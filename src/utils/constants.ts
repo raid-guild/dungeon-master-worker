@@ -68,3 +68,4 @@ export const JESTER_TIP_AMOUNT = '50';
 export const JESTER_TABLE_NAME = 'latestJesterTips';
 
 export const DISCORD_EXPORTER_URL = process.env.DISCORD_EXPORTER_URL ?? '';
+export const DISCORD_EXPORTER_API = process.env.DISCORD_EXPORTER_API ?? '';
