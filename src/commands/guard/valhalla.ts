@@ -7,7 +7,10 @@ import {
   TextChannel
 } from 'discord.js';
 
-import { DISCORD_VALHALLA_CATEGORY_ID } from '@/utils/constants';
+import {
+  DISCORD_EXPORTER_API,
+  DISCORD_VALHALLA_CATEGORY_ID
+} from '@/utils/constants';
 import { sendMessageWithFallback } from '@/utils/discord-utils';
 import { discordLogger } from '@/utils/logger';
 
@@ -59,7 +62,13 @@ export const toValhallaExecute = async (
           channelId: channel.id,
           guildId: interaction.guildId
         },
-        { timeout: 10000 }
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${DISCORD_EXPORTER_API}`
+          },
+          timeout: 10000
+        }
       ); // Add a 10-second timeout
 
       if (exportResponse.status !== 202) {
