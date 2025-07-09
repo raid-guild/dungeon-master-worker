@@ -67,7 +67,7 @@ export const roleClaim = (client: Client) => {
       dwarf: 'AngryDwarf (Treasury)',
       druid: 'Druid (Data Science/Analyst)',
       wizard: 'Wizard (Smart Contracts)',
-      hammer_pick: 'Forge (updates)'
+      '⚒️': 'Forge (updates)'
     };
 
     // const channel = client.channels.cache.get(startHereChannelID);
