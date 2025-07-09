@@ -7,6 +7,7 @@ import {
 } from 'discord.js';
 
 import {
+  DISCORD_FORGE_CHANNEL_ID,
   DISCORD_GUARD_CLIENT_ID,
   DISCORD_START_HERE_CHANNEL_ID
 } from '@/utils/constants';
@@ -47,6 +48,7 @@ const handleReaction = (
 export const roleClaim = (client: Client) => {
   try {
     const startHereChannelId = DISCORD_START_HERE_CHANNEL_ID;
+    const forgeChannelId = DISCORD_FORGE_CHANNEL_ID;
 
     const emojis = {
       cleric: 'Cleric (Account Manager)',
@@ -64,7 +66,8 @@ export const roleClaim = (client: Client) => {
       necro: 'Necromancer (DevOps)',
       dwarf: 'AngryDwarf (Treasury)',
       druid: 'Druid (Data Science/Analyst)',
-      wizard: 'Wizard (Smart Contracts)'
+      wizard: 'Wizard (Smart Contracts)',
+      hammer_pick: 'Forge (updates)'
     };
 
     // const channel = client.channels.cache.get(startHereChannelID);
@@ -84,7 +87,10 @@ export const roleClaim = (client: Client) => {
     // });
 
     client.on('messageReactionAdd', (reaction, user) => {
-      if (reaction.message.channel.id === startHereChannelId) {
+      if (
+        reaction.message.channel.id === startHereChannelId ||
+        reaction.message.channel.id === forgeChannelId
+      ) {
         if (!reaction.emoji.name) return;
         if (!(reaction.emoji.name in emojis)) {
           reaction.users.remove(user.id);
@@ -95,7 +101,10 @@ export const roleClaim = (client: Client) => {
     });
 
     client.on('messageReactionRemove', (reaction, user) => {
-      if (reaction.message.channel.id === startHereChannelId) {
+      if (
+        reaction.message.channel.id === startHereChannelId ||
+        reaction.message.channel.id === forgeChannelId
+      ) {
         handleReaction(reaction, user, false, emojis);
       }
     });
