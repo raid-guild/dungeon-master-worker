@@ -16,6 +16,8 @@ export const DISCORD_COMMAND_CENTER_ID =
   process.env.DISCORD_COMMAND_CENTER_ID ?? '';
 export const DISCORD_START_HERE_CHANNEL_ID =
   process.env.DISCORD_START_HERE_CHANNEL_ID ?? '';
+export const DISCORD_FORGE_CHANNEL_ID =
+  process.env.DISCORD_FORGE_CHANNEL_ID ?? '';
 export const DISCORD_VALHALLA_CATEGORY_ID =
   process.env.DISCORD_VALHALLA_CATEGORY_ID ?? '';
 export const DISCORD_RAIDS_CATEGORY_ID =
