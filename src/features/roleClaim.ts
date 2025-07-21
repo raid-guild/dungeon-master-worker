@@ -92,7 +92,10 @@ export const roleClaim = (client: Client) => {
         reaction.message.channel.id === forgeChannelId
       ) {
         if (!reaction.emoji.name) return;
-        if (!(reaction.emoji.name in emojis)) {
+        if (
+          !(reaction.emoji.name in emojis) &&
+          reaction.message.channel.id === startHereChannelId
+        ) {
           reaction.users.remove(user.id);
         } else {
           handleReaction(reaction, user, true, emojis);
