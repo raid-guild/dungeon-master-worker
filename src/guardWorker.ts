@@ -24,6 +24,7 @@ import {
   DISCORD_ALLOW_BOTS,
   DISCORD_GUARD_TOKEN,
   DISCORD_GUILD_ID,
+  DISCORD_LURKER_GUARD_ENABLED,
   DISCORD_NEWCOMERS_CHANNEL_ID,
   DISCORD_UNLOCK_CHANNELS_ID
 } from '@/utils/constants';
@@ -60,7 +61,9 @@ export const setupGuardWorker = () => {
     const guild = client.guilds.resolve(DISCORD_GUILD_ID);
     if (!guild) return;
 
-    lurkerGuard(client, guild);
+    if (DISCORD_LURKER_GUARD_ENABLED === 'true') {
+      lurkerGuard(client, guild);
+    }
   });
 
   client.on(Events.GuildMemberAdd, member => {
